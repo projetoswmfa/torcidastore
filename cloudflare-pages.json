@@ -1,0 +1,11 @@
+{
+  "name": "torcidastore",
+  "build": {
+    "command": "npm run build",
+    "directory": "dist",
+    "environment": {
+      "NODE_VERSION": "18"
+    }
+  },
+  "package_manager": "npm"
+} 

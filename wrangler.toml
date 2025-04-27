@@ -1,9 +1,5 @@
 [build]
 command = "npm run build"
-node_compat = true
-
-[site]
-bucket = "dist"
 
 [build.environment]
 NODE_VERSION = "18"
