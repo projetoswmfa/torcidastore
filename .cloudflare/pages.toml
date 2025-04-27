@@ -1,0 +1,11 @@
+[build]
+command = "npm run build"
+
+[build.environment]
+NODE_VERSION = "18"
+
+[functions]
+directory = "./functions"
+
+[pages_build_output_dir]
+value = "dist" 
