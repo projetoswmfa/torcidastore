@@ -1,0 +1,244 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 199 89% 48%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 0 0% 100%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 199 89% 48%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  /* Variáveis específicas para área administrativa */
+  .admin-layout {
+    --admin-foreground: 222.2 84% 4.9%;
+    --admin-card-foreground: 222.2 84% 4.9%;
+    --admin-popover-foreground: 222.2 84% 4.9%;
+    --admin-secondary-foreground: 222.2 47.4% 11.2%;
+    --admin-muted-foreground: 215.4 16.3% 30%;
+    --admin-accent-foreground: 222.2 47.4% 11.2%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 80%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* Adiciona shadow para melhorar legibilidade em fundos claros */
+  :not(.admin-layout):not([class*="admin-"]) p, 
+  :not(.admin-layout):not([class*="admin-"]) h1, 
+  :not(.admin-layout):not([class*="admin-"]) h2, 
+  :not(.admin-layout):not([class*="admin-"]) h3, 
+  :not(.admin-layout):not([class*="admin-"]) h4, 
+  :not(.admin-layout):not([class*="admin-"]) h5, 
+  :not(.admin-layout):not([class*="admin-"]) h6, 
+  :not(.admin-layout):not([class*="admin-"]) span, 
+  :not(.admin-layout):not([class*="admin-"]) a, 
+  :not(.admin-layout):not([class*="admin-"]) label, 
+  :not(.admin-layout):not([class*="admin-"]) li,
+  :not(.admin-layout):not([class*="admin-"]) div {
+    color: white !important;
+    text-shadow: 0 0 2px rgba(0,0,0,0.3);
+  }
+  
+  /* Preserva a cor original dos botões, inputs e elementos de formulário */
+  button, input, select, textarea {
+    color: inherit;
+    text-shadow: none;
+  }
+  
+  /* Exceção para ícones SVG em botões */
+  button svg, 
+  a svg,
+  .cart-button svg {
+    color: inherit !important;
+    text-shadow: none !important;
+  }
+
+  /* Estilo específico para o botão do carrinho nos cards */
+  .cart-button {
+    background-color: #0EA5E9 !important;
+  }
+  
+  .cart-button:hover {
+    background-color: #0284c7 !important;
+  }
+  
+  .cart-button svg {
+    color: white !important;
+  }
+  
+  /* Estilo para ícones na navegação */
+  .nav-icon-button svg {
+    color: inherit !important;
+  }
+  
+  /* Correção para classes específicas do Tailwind em elementos não-admin */
+  :not(.admin-layout):not([class*="admin-"]) .text-foreground,
+  :not(.admin-layout):not([class*="admin-"]) .text-card-foreground,
+  :not(.admin-layout):not([class*="admin-"]) .text-popover-foreground,
+  :not(.admin-layout):not([class*="admin-"]) .text-primary-foreground,
+  :not(.admin-layout):not([class*="admin-"]) .text-secondary-foreground,
+  :not(.admin-layout):not([class*="admin-"]) .text-muted-foreground,
+  :not(.admin-layout):not([class*="admin-"]) .text-accent-foreground {
+    color: white !important;
+    text-shadow: 0 0 2px rgba(0,0,0,0.3);
+  }
+
+  /* Exceção para a área de personalização de camisas */
+  .customization-box,
+  .customization-box * {
+    text-shadow: none !important;
+  }
+
+  /* Exceção para os placeholder de inputs na área de personalização */
+  .customization-box input::placeholder {
+    color: rgba(147, 197, 253, 0.8) !important; /* blue-300 com transparência */
+  }
+  
+  /* Animação de destaque para a área de personalização */
+  @keyframes pulse-border {
+    0% {
+      box-shadow: 0 0 0 0 rgba(0, 100, 148, 0.4);
+    }
+    70% {
+      box-shadow: 0 0 0 6px rgba(0, 100, 148, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(0, 100, 148, 0);
+    }
+  }
+  
+  .customization-box {
+    animation: pulse-border 2s infinite;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Preserva a cor original para componentes administrativos */
+  .admin-layout, 
+  .admin-layout *, 
+  [class*="admin-"], 
+  [class*="admin-"] * {
+    color: hsl(var(--admin-foreground, 222.2 84% 4.9%)) !important;
+    text-shadow: none !important;
+  }
+
+  /* Preservar cores específicas da área administrativa */
+  .admin-layout .text-muted-foreground,
+  [class*="admin-"] .text-muted-foreground {
+    color: hsl(var(--admin-muted-foreground, 215.4 16.3% 30%)) !important;
+  }
+
+  .admin-layout .text-card-foreground,
+  [class*="admin-"] .text-card-foreground {
+    color: hsl(var(--admin-card-foreground, 222.2 84% 4.9%)) !important;
+  }
+
+  .product-card {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  .banner-slide {
+    @apply relative overflow-hidden;
+  }
+  
+  .admin-layout {
+    @apply grid grid-cols-[280px_1fr] min-h-screen;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out forwards;
+  }
+}
