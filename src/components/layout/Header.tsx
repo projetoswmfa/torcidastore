@@ -120,7 +120,7 @@ export function Header() {
       {/* Mobile Menu */}
       <div
         className={cn(
-          "fixed inset-0 bg-background z-40 transform transition-transform duration-300 ease-in-out md:hidden",
+          "fixed inset-0 bg-background/95 backdrop-blur-sm z-40 transform transition-transform duration-300 ease-in-out md:hidden",
           mobileMenuOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
@@ -133,47 +133,70 @@ export function Header() {
           >
             <X className="h-6 w-6" />
           </Button>
-          
-          <nav className="flex-1">
-            <ul className="space-y-6">
-              {categories.map((category) => (
-                <li key={category.path}>
-                  <Link
-                    to={category.path}
-                    className="text-lg font-medium text-foreground hover:text-primary"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {category.name}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <Link
-                  to="/login"
-                  className="text-lg font-medium text-foreground hover:text-primary"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Entrar / Cadastrar
-                </Link>
-              </li>
-              <li className="mt-2 pt-2 border-t border-border">
-                <Link
-                  to="/admin"
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 border border-slate-700 shadow-md"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Shield className="h-5 w-5 text-blue-400" />
-                  <div>
-                    <span className="text-white font-medium block">Área Administrativa</span>
-                    <span className="text-xs text-slate-400">Acesso restrito</span>
-                  </div>
-                  <div className="ml-auto bg-blue-500/20 text-blue-400 text-xs py-1 px-2 rounded font-medium">
-                    Admin
-                  </div>
-                </Link>
-              </li>
-            </ul>
+
+          {/* Mobile Search */}
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar camisas..."
+                className="pl-10 rounded-full w-full"
+              />
+            </div>
+          </div>
+
+          {/* Mobile Navigation */}
+          <nav className="flex flex-col space-y-4">
+            <Link
+              to="/"
+              className="text-lg font-medium hover:text-sport-blue transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Início
+            </Link>
+            <Link
+              to="/produtos"
+              className="text-lg font-medium hover:text-sport-blue transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Produtos
+            </Link>
+            <Link
+              to="/sobre"
+              className="text-lg font-medium hover:text-sport-blue transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Sobre
+            </Link>
+            <Link
+              to="/contato"
+              className="text-lg font-medium hover:text-sport-blue transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Contato
+            </Link>
           </nav>
+
+          {/* Mobile User Actions */}
+          <div className="mt-auto space-y-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <User className="h-5 w-5" />
+              Minha Conta
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <ShoppingCart className="h-5 w-5" />
+              Carrinho
+            </Button>
+          </div>
         </div>
       </div>
     </header>

@@ -147,27 +147,30 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-teal-900/10">
-      <header className="fixed top-0 left-0 right-0 h-16 bg-teal-900 shadow-lg flex items-center z-30 px-4 md:px-6">
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden text-white hover:bg-teal-800/50 hover:text-white"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-            <div className="ml-4">
-              <Link to="/" className="font-bold text-lg text-white">
-                Torcida<span className="text-teal-300">Store</span>
-              </Link>
-            </div>
+    <div className="admin-layout bg-gray-100">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-teal-900 shadow-lg z-30">
+        <div className="h-full px-4 flex items-center">
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden text-white hover:bg-teal-800/50"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+
+          {/* Desktop Logo */}
+          <div className="hidden md:flex items-center gap-2">
+            <ShoppingBag className="h-6 w-6 text-teal-300" />
+            <span className="font-bold text-white">Torcida Store</span>
           </div>
 
+          {/* Right Side Actions */}
           <div className="ml-auto flex items-center space-x-4">
-            <div className="relative hidden md:flex items-center">
+            {/* Search - Desktop Only */}
+            <div className="relative hidden lg:flex items-center">
               <Search className="absolute left-3 h-4 w-4 text-white/60" />
               <Input
                 placeholder="Buscar..."
@@ -176,28 +179,26 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               />
             </div>
 
-            <div className="flex items-center space-x-3">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="relative text-white hover:bg-teal-800/50 hover:text-white rounded-full"
-              >
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  3
-                </span>
-              </Button>
-              
-              <div className="border-l border-teal-700 h-8 mx-1" />
-              
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-teal-600 to-teal-500 flex items-center justify-center text-white shadow-md">
-                  <User className="h-5 w-5" />
-                </div>
-                <div className="hidden md:block">
-                  <p className="text-sm font-medium text-white">{user?.email?.split('@')[0] || 'Admin'}</p>
-                  <p className="text-xs text-white/70">Administrador</p>
-                </div>
+            {/* Notifications */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative text-white hover:bg-teal-800/50 hover:text-white rounded-full"
+            >
+              <Bell className="h-5 w-5" />
+              <span className="absolute -top-1 -right-1 bg-teal-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                3
+              </span>
+            </Button>
+            
+            {/* User Profile */}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-teal-600 to-teal-500 flex items-center justify-center text-white shadow-md">
+                <User className="h-5 w-5" />
+              </div>
+              <div className="hidden md:block">
+                <p className="text-sm font-medium text-white">{user?.email?.split('@')[0] || 'Admin'}</p>
+                <p className="text-xs text-white/70">Administrador</p>
               </div>
             </div>
           </div>
@@ -205,19 +206,30 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </header>
 
       {/* Main Container */}
-      <div className="pt-16 flex h-[calc(100vh-64px)]">
-        {/* Sidebar - Desktop */}
+      <div className="pt-16 flex min-h-[calc(100vh-64px)]">
+        {/* Sidebar */}
         <aside
           className={cn(
-            "fixed md:relative h-[calc(100vh-64px)] z-20 transition-all duration-300 ease-in-out md:block",
+            "fixed md:relative h-[calc(100vh-64px)] z-20 transition-all duration-300 ease-in-out",
             collapsed ? "md:w-[80px]" : "w-[280px]",
             mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
             "bg-teal-900 text-white border-r border-teal-800 shadow-xl"
           )}
         >
+          {/* Sidebar Content */}
           <div className="flex flex-col h-full">
+            {/* Mobile Close Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 md:hidden text-white hover:bg-teal-800/50"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+
             {/* Sidebar Header */}
-            <div className="flex items-center px-6 h-16 mb-2 relative after:content-[''] after:absolute after:bottom-0 after:left-3 after:right-3 after:h-[1px] after:bg-gradient-to-r after:from-transparent after:via-teal-700/50 after:to-transparent">
+            <div className="flex items-center px-6 h-16 mb-2">
               {!collapsed && (
                 <Link to="/admin" className="font-bold text-lg text-white">
                   Torcida Store <span className="text-teal-300">Admin</span>
@@ -227,7 +239,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "text-white/70 hover:text-white hover:bg-teal-800/50 ml-auto rounded-full",
+                  "text-white/70 hover:text-white hover:bg-teal-800/50 ml-auto rounded-full hidden md:flex",
                   collapsed && "mx-auto"
                 )}
                 onClick={() => setCollapsed(!collapsed)}
@@ -242,104 +254,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
 
             {/* Navigation */}
-            <nav className="px-3 py-4 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-teal-700/50 scrollbar-track-transparent">
-              <div className={cn("mb-4", collapsed && "hidden")}>
-                <p className="text-xs uppercase font-semibold text-white/50 px-3 mb-2">
-                  Gerenciamento
-                </p>
-              </div>
-              <ul className="space-y-1.5">
-                {navigationItems.slice(0, 5).map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      to={item.path}
-                      className={cn(
-                        "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                        location.pathname === item.path
-                          ? "bg-gradient-to-r from-teal-700 to-teal-600 text-white shadow-md"
-                          : "text-white/80 hover:bg-teal-800/50 hover:text-white"
-                      )}
-                    >
-                      <item.icon
-                        className={cn(
-                          "h-5 w-5",
-                          !collapsed && "mr-3",
-                          collapsed && "mx-auto"
-                        )}
-                      />
-                      {!collapsed && <span>{item.name}</span>}
-                      
-                      {!collapsed && location.pathname === item.path && (
-                        <div className="ml-auto h-2 w-2 rounded-full bg-teal-400" />
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              
-              {!collapsed && (
-                <div className="mt-6 mb-4">
-                  <p className="text-xs uppercase font-semibold text-white/50 px-3 mb-2">
-                    Sistema
-                  </p>
-                </div>
-              )}
-              
-              <ul className="space-y-1.5">
-                {navigationItems.slice(5).map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      to={item.path}
-                      className={cn(
-                        "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                        location.pathname === item.path
-                          ? "bg-gradient-to-r from-teal-700 to-teal-600 text-white shadow-md"
-                          : "text-white/80 hover:bg-teal-800/50 hover:text-white"
-                      )}
-                    >
-                      <item.icon
-                        className={cn(
-                          "h-5 w-5",
-                          !collapsed && "mr-3",
-                          collapsed && "mx-auto"
-                        )}
-                      />
-                      {!collapsed && <span>{item.name}</span>}
-                      
-                      {!collapsed && location.pathname === item.path && (
-                        <div className="ml-auto h-2 w-2 rounded-full bg-teal-400" />
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+            <nav className="flex-1 px-4 space-y-2 py-4">
+              {/* Add your navigation items here */}
             </nav>
-
-            {/* Sidebar Footer */}
-            <div className="px-3 py-4 mt-auto relative before:content-[''] before:absolute before:top-0 before:left-3 before:right-3 before:h-[1px] before:bg-gradient-to-r before:from-transparent before:via-teal-700/50 before:to-transparent">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full flex items-center rounded-xl px-3 py-2.5 text-sm font-medium text-white/80 hover:bg-teal-800/50 hover:text-white transition-all",
-                  collapsed && "justify-center"
-                )}
-                onClick={handleSignOut}
-              >
-                <LogOut
-                  className={cn(
-                    "h-5 w-5",
-                    !collapsed && "mr-3",
-                    collapsed && "mx-auto"
-                  )}
-                />
-                {!collapsed && <span>Sair</span>}
-              </Button>
-            </div>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6 md:p-8 overflow-auto bg-teal-900/10">
+        <main className="flex-1 p-6 overflow-x-hidden">
           {children}
         </main>
       </div>

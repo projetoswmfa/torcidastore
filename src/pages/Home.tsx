@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProductCard } from "@/components/product/ProductCard";
 
 // Categorias temporárias para exibição enquanto carrega ou se não houver categorias
 const defaultCategories = [
@@ -151,21 +152,39 @@ export default function Home() {
             />
           )}
           
-          {/* Newsletter */}
-          <section className="mb-16 bg-sport-dark text-white rounded-lg p-8 md:p-12">
+          {/* Grid de Produtos */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
+            {productsLoading ? (
+              // Skeletons para carregamento
+              Array.from({ length: 8 }).map((_, index) => (
+                <div key={index} className="bg-white rounded-lg shadow-md p-4 animate-pulse">
+                  <div className="w-full h-48 bg-gray-200 rounded-lg mb-4" />
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                  <div className="h-4 bg-gray-200 rounded w-1/2" />
+                </div>
+              ))
+            ) : (
+              products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))
+            )}
+          </div>
+
+          {/* Seção de Newsletter */}
+          <section className="mb-16 bg-sport-dark text-white rounded-lg p-4 sm:p-8 md:p-12">
             <div className="max-w-2xl mx-auto text-center">
-              <h2 className="text-3xl font-bold mb-4">Fique por dentro das novidades</h2>
-              <p className="text-lg mb-6 text-gray-300">
+              <h2 className="text-2xl sm:text-3xl font-bold mb-4">Fique por dentro das novidades</h2>
+              <p className="text-base sm:text-lg mb-6 text-gray-300">
                 Inscreva-se para receber atualizações sobre novos produtos e ofertas especiais.
               </p>
               
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 max-w-md mx-auto">
                 <input
                   type="email"
                   placeholder="Seu melhor e-mail"
-                  className="flex-1 px-4 py-3 rounded-l-lg text-gray-900 focus:outline-none sm:rounded-r-none rounded-r-lg"
+                  className="flex-1 px-4 py-3 rounded-lg sm:rounded-l-lg sm:rounded-r-none text-gray-900 focus:outline-none"
                 />
-                <Button className="bg-sport-blue hover:bg-blue-600 sm:rounded-l-none rounded-l-lg">
+                <Button className="bg-sport-blue hover:bg-blue-600 sm:rounded-l-none sm:rounded-r-lg w-full sm:w-auto">
                   Inscrever-se
                 </Button>
               </div>
