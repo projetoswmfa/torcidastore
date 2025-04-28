@@ -96,6 +96,7 @@
     "vite": "^5.4.1"
   },
   "overrides": {
-    "@eslint/config-array": "0.17.1"
+    "@eslint/config-array": "0.17.1",
+    "@eslint/core": "0.6.0"
   }
 }
