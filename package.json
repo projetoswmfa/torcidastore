@@ -97,6 +97,7 @@
   },
   "overrides": {
     "@eslint/config-array": "0.17.1",
-    "@eslint/core": "0.6.0"
+    "@eslint/core": "0.6.0",
+    "@eslint/eslintrc": "3.0.0"
   }
 }
