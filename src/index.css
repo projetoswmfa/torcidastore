@@ -210,7 +210,7 @@
     text-shadow: none !important;
   }
 
-  /* Preservar cores específicas da área administrativa */
+  /* Manter apenas estas personalizações para área administrativa */
   .admin-layout .text-muted-foreground,
   [class*="admin-"] .text-muted-foreground {
     color: hsl(var(--admin-muted-foreground, 215.4 16.3% 30%)) !important;
@@ -229,10 +229,6 @@
     @apply relative overflow-hidden;
   }
   
-  .admin-layout {
-    @apply grid grid-cols-[280px_1fr] min-h-screen;
-  }
-
   @keyframes fade-in {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }

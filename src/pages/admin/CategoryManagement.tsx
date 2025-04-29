@@ -17,14 +17,29 @@ import {
   Trash2,
   Search,
   Loader2,
-  LayersIcon
+  LayersIcon,
+  Image as ImageIcon,
+  Eye
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCategories, Category } from "@/hooks/useCategories";
+import { useSiteImages, IMAGE_TYPES, SiteImage } from "@/hooks/useSiteImages";
+import { S3ImageUpload } from "@/components/ui/S3ImageUpload";
+import { v4 as uuidv4 } from "uuid";
+import { Link } from "react-router-dom";
 
 export default function CategoryManagement() {
   const { categories, loading: categoriesLoading, fetchCategories } = useCategories();
+  // Hook para gerenciar imagens de categoria
+  const { 
+    images: categoryImages, 
+    loading: imagesLoading, 
+    createImage, 
+    updateImage, 
+    deleteImage 
+  } = useSiteImages({ type: IMAGE_TYPES.CATEGORY });
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -41,6 +56,12 @@ export default function CategoryManagement() {
   });
   const [selectedSubcategory, setSelectedSubcategory] = useState<Category | null>(null);
   const [isEditSubcategoryDialogOpen, setIsEditSubcategoryDialogOpen] = useState(false);
+  
+  // Novos estados para gerenciamento de imagens
+  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [selectedCategoryForImage, setSelectedCategoryForImage] = useState<Category | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
+  const [uploadedImagePath, setUploadedImagePath] = useState<string>("");
 
   // Filtrar categorias baseado na busca
   const filteredCategories = categories.filter(category => 
@@ -231,6 +252,100 @@ export default function CategoryManagement() {
     setIsAddSubcategoryDialogOpen(true);
   };
 
+  // Funções para gerenciar imagens de categoria
+  const handleOpenImageDialog = (category: Category) => {
+    setSelectedCategoryForImage(category);
+    
+    // Buscar imagem existente se houver
+    const existingImage = categoryImages.find(img => img.reference_id === category.id);
+    
+    if (existingImage) {
+      setUploadedImageUrl(existingImage.image_url || "");
+      setUploadedImagePath(existingImage.image_path || "");
+    } else {
+      setUploadedImageUrl("");
+      setUploadedImagePath("");
+    }
+    
+    setIsImageDialogOpen(true);
+  };
+
+  const handleImageUploadSuccess = (imageUrl: string) => {
+    // Extrair o caminho da URL
+    const pathMatch = imageUrl.match(/\/([^/]+\/[^/]+\.[^/]+)$/);
+    const imagePath = pathMatch ? pathMatch[1] : "";
+    
+    setUploadedImageUrl(imageUrl);
+    setUploadedImagePath(imagePath);
+  };
+
+  const handleSaveImage = async () => {
+    if (!selectedCategoryForImage || !uploadedImageUrl || !uploadedImagePath) {
+      toast.error("Selecione uma categoria e faça upload de uma imagem");
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Verificar se já existe uma imagem para esta categoria
+      const existingImage = categoryImages.find(img => img.reference_id === selectedCategoryForImage.id);
+      
+      if (existingImage) {
+        // Atualizar imagem existente
+        await updateImage(existingImage.id, {
+          image_url: uploadedImageUrl,
+          image_path: uploadedImagePath,
+          title: selectedCategoryForImage.name,
+          link: `/categorias/${selectedCategoryForImage.id}`,
+          active: true
+        });
+      } else {
+        // Criar nova imagem
+        await createImage({
+          type: IMAGE_TYPES.CATEGORY,
+          reference_id: selectedCategoryForImage.id,
+          image_url: uploadedImageUrl,
+          image_path: uploadedImagePath,
+          title: selectedCategoryForImage.name,
+          link: `/categorias/${selectedCategoryForImage.id}`,
+          active: true
+        });
+      }
+      
+      toast.success("Imagem da categoria salva com sucesso");
+      setIsImageDialogOpen(false);
+    } catch (error) {
+      console.error("Erro ao salvar imagem da categoria:", error);
+      toast.error("Erro ao salvar imagem da categoria");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteCategoryImage = async (categoryId: string) => {
+    if (!confirm("Tem certeza que deseja remover a imagem desta categoria?")) {
+      return;
+    }
+
+    try {
+      const existingImage = categoryImages.find(img => img.reference_id === categoryId);
+      
+      if (existingImage) {
+        await deleteImage(existingImage.id);
+        toast.success("Imagem da categoria removida com sucesso");
+      }
+    } catch (error) {
+      console.error("Erro ao excluir imagem da categoria:", error);
+      toast.error("Erro ao excluir imagem da categoria");
+    }
+  };
+
+  // Verificar se uma categoria tem imagem
+  const getCategoryImage = (categoryId: string): SiteImage | undefined => {
+    return categoryImages.find(img => img.reference_id === categoryId);
+  };
+
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-8">
@@ -250,377 +365,374 @@ export default function CategoryManagement() {
                 Nova Categoria
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-teal-900 border-teal-700 text-teal-50 rounded-xl shadow-xl">
+            <DialogContent>
               <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-teal-50">Adicionar Nova Categoria</DialogTitle>
+                <DialogTitle>Adicionar Nova Categoria</DialogTitle>
               </DialogHeader>
-              
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <label htmlFor="name" className="text-sm font-medium text-teal-200">
-                    Nome da Categoria
-                  </label>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label htmlFor="name">Nome da Categoria</label>
                   <Input
                     id="name"
                     name="name"
+                    placeholder="Ex: Camisetas"
                     value={newCategory.name}
                     onChange={handleInputChange}
-                    placeholder="Ex: Camisas de Futebol"
-                    className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
                   />
                 </div>
-                
-                <div className="grid gap-2">
-                  <label htmlFor="description" className="text-sm font-medium text-teal-200">
-                    Descrição
-                  </label>
-                  <textarea
+                <div className="space-y-2">
+                  <label htmlFor="description">Descrição (opcional)</label>
+                  <Input
                     id="description"
                     name="description"
+                    placeholder="Descreva brevemente esta categoria"
                     value={newCategory.description || ""}
-                    onChange={handleInputChange as any}
-                    placeholder="Descreva a categoria"
-                    rows={3}
-                    className="resize-none bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600 rounded-md px-3 py-2"
+                    onChange={handleInputChange}
                   />
                 </div>
               </div>
-              
-              <div className="flex justify-end gap-2 mt-4">
+              <div className="flex justify-end space-x-2">
                 <Button
-                  type="button"
                   variant="outline"
                   onClick={() => setIsAddDialogOpen(false)}
-                  className="bg-transparent border-teal-600 text-teal-100 hover:bg-teal-800 hover:text-teal-50"
                 >
                   Cancelar
                 </Button>
                 <Button
-                  type="button"
                   onClick={handleAddCategory}
                   disabled={isSubmitting}
-                  className="bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white"
+                  className="bg-teal-600 hover:bg-teal-700 text-white"
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processando...
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
                     </>
                   ) : (
-                    'Adicionar Categoria'
+                    "Salvar Categoria"
                   )}
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
+
+          <Link to="/" target="_blank">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Eye className="h-4 w-4" /> Visualizar Site
+            </Button>
+          </Link>
         </div>
       </div>
 
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-teal-300" />
+      <div className="flex items-center mb-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar categorias por nome..."
-            className="pl-10 bg-teal-800/30 border-teal-700 text-teal-50 placeholder:text-teal-400/70 focus:border-teal-500"
+            type="search"
+            placeholder="Buscar categorias..."
+            className="pl-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
 
-      {categoriesLoading ? (
+      {categoriesLoading || imagesLoading ? (
         <div className="flex justify-center items-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
-          <span className="ml-2 text-lg text-teal-100">Carregando categorias...</span>
-        </div>
-      ) : filteredCategories.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-md p-8 text-center border border-[#E8F1F2]/30">
-          <LayersIcon className="h-12 w-12 mx-auto text-[#006494]/40 mb-4" />
-          <h3 className="text-lg font-medium mb-2 text-[#13293D]">Nenhuma categoria encontrada</h3>
-          <p className="text-[#13293D]/85 mb-4">
-            Comece adicionando sua primeira categoria usando o botão acima.
-          </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-teal-700 overflow-hidden bg-teal-800/30 shadow-lg">
+        <div className="bg-white/5 rounded-lg shadow overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-teal-800/50">
-                <TableHead className="text-teal-50 font-medium">Nome</TableHead>
-                <TableHead className="text-teal-50 font-medium">Descrição</TableHead>
-                <TableHead className="text-teal-50 font-medium">Subcategorias</TableHead>
-                <TableHead className="text-teal-50 font-medium">Ações</TableHead>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Subcategorias</TableHead>
+                <TableHead>Imagem</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCategories.map((category) => (
-                <TableRow key={category.id} className="hover:bg-teal-700/30 transition-colors border-b border-teal-700/30">
-                  <TableCell className="font-medium text-teal-100">
-                    {category.name}
+              {filteredCategories.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                    <LayersIcon className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                    <p>Nenhuma categoria encontrada</p>
+                    {searchQuery && (
+                      <p className="text-sm mt-1">Tente ajustar sua busca</p>
+                    )}
                   </TableCell>
-                  <TableCell className="text-teal-200">
-                    {category.description || "-"}
-                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredCategories.map((category) => {
+                  const categoryImage = getCategoryImage(category.id);
+                  
+                  return (
+                    <TableRow key={category.id}>
+                      <TableCell className="font-medium">{category.name}</TableCell>
+                      <TableCell>{category.description || "—"}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {category.subcategories?.map((subcategory) => (
+                          {category.subcategories && category.subcategories.length > 0 ? (
+                            category.subcategories.map((sub) => (
                         <span 
-                          key={subcategory.id}
-                          className="inline-flex items-center rounded-full bg-teal-700/50 px-2 py-1 text-xs font-medium text-teal-100"
+                                key={sub.id}
+                                className="bg-teal-950/30 text-teal-300 text-xs rounded-full px-2 py-1"
                         >
-                          {subcategory.name}
+                                {sub.name}
                         </span>
-                      ))}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedCategory(category);
-                          setNewSubcategory({
-                            name: "",
-                            category_id: category.id
-                          });
-                          setIsAddSubcategoryDialogOpen(true);
-                        }}
-                        className="rounded-full h-6 px-2 text-xs bg-transparent border-teal-600 text-teal-100 hover:bg-teal-700/40"
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Adicionar
-                      </Button>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Nenhuma subcategoria</span>
+                          )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
+                        {categoryImage ? (
+                          <div className="relative group">
+                            <img 
+                              src={categoryImage.image_url} 
+                              alt={category.name} 
+                              className="h-12 w-20 object-cover rounded"
+                            />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded">
                       <Button
-                        onClick={() => {
-                          setSelectedCategory(category);
-                          setIsEditDialogOpen(true);
-                        }}
                         size="sm"
-                        className="bg-teal-700 hover:bg-teal-600 text-teal-50 border-none"
+                                variant="ghost"
+                                className="text-white h-8 w-8 p-0"
+                                onClick={() => handleOpenImageDialog(category)}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
-                        onClick={() => handleDeleteCategory(category.id)}
                         size="sm"
-                        variant="destructive"
-                        className="bg-red-600 hover:bg-red-700 text-white border-none"
+                                variant="ghost"
+                                className="text-white h-8 w-8 p-0"
+                                onClick={() => handleDeleteCategoryImage(category.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            className="text-teal-500 hover:text-teal-400"
+                            onClick={() => handleOpenImageDialog(category)}
+                          >
+                            <ImageIcon className="h-4 w-4 mr-2" />
+                            Adicionar
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Abrir menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(category)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              <span>Editar</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleAddSubcategoryToCategory(category.id)}>
+                              <Plus className="mr-2 h-4 w-4" />
+                              <span>Adicionar Subcategoria</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenImageDialog(category)}>
+                              <ImageIcon className="mr-2 h-4 w-4" />
+                              <span>Gerenciar Imagem</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => handleDeleteCategory(category.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Excluir</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </div>
       )}
 
-      {/* Modal de adicionar subcategoria */}
-      <Dialog open={isAddSubcategoryDialogOpen} onOpenChange={setIsAddSubcategoryDialogOpen}>
-        <DialogContent className="bg-teal-900 border-teal-700 text-teal-50 rounded-xl shadow-xl">
+      {/* Diálogo de edição de categoria */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-teal-50">
-              Adicionar Subcategoria 
-              {selectedCategory && ` em ${selectedCategory.name}`}
-            </DialogTitle>
+            <DialogTitle>Editar Categoria</DialogTitle>
           </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label htmlFor="subcat-name" className="text-sm font-medium text-teal-200">
-                Nome da Subcategoria
-              </label>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="edit-name">Nome da Categoria</label>
               <Input
-                id="subcat-name"
-                value={newSubcategory.name}
-                onChange={(e) => setNewSubcategory({ ...newSubcategory, name: e.target.value })}
-                placeholder="Ex: Camisas Masculinas"
-                className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
+                id="edit-name"
+                name="name"
+                placeholder="Ex: Camisetas"
+                value={selectedCategory?.name || ""}
+                onChange={handleEditInputChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="edit-description">Descrição (opcional)</label>
+              <Input
+                id="edit-description"
+                name="description"
+                placeholder="Descreva brevemente esta categoria"
+                value={selectedCategory?.description || ""}
+                onChange={handleEditInputChange}
               />
             </div>
           </div>
-          
-          <div className="flex justify-end gap-2 mt-4">
+          <div className="flex justify-end space-x-2">
             <Button
-              type="button"
               variant="outline"
-              onClick={() => setIsAddSubcategoryDialogOpen(false)}
-              className="bg-transparent border-teal-600 text-teal-100 hover:bg-teal-800 hover:text-teal-50"
+              onClick={() => setIsEditDialogOpen(false)}
             >
               Cancelar
             </Button>
             <Button
-              type="button"
-              onClick={handleAddSubcategory}
+              onClick={handleUpdateCategory}
               disabled={isSubmitting}
-              className="bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processando...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
                 </>
               ) : (
-                'Adicionar Subcategoria'
+                "Salvar Alterações"
               )}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Modal de edição de categoria */}
-      {selectedCategory && (
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="bg-teal-900 border-teal-700 text-teal-50 rounded-xl shadow-xl">
+      {/* Diálogo para adicionar subcategoria */}
+      <Dialog open={isAddSubcategoryDialogOpen} onOpenChange={setIsAddSubcategoryDialogOpen}>
+        <DialogContent>
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-teal-50">Editar Categoria</DialogTitle>
+            <DialogTitle>Adicionar Subcategoria</DialogTitle>
             </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <label htmlFor="edit-name" className="text-sm font-medium text-teal-200">
-                  Nome da Categoria
-                </label>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="subcategory-name">Nome da Subcategoria</label>
                 <Input
-                  id="edit-name"
-                  value={selectedCategory.name}
-                  onChange={(e) => setSelectedCategory({ ...selectedCategory, name: e.target.value })}
-                  className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
-                />
-              </div>
-              
-              <div className="grid gap-2">
-                <label htmlFor="edit-desc" className="text-sm font-medium text-teal-200">
-                  Descrição
-                </label>
-                <textarea
-                  id="edit-desc"
-                  value={selectedCategory.description || ""}
-                  onChange={(e) => setSelectedCategory({ ...selectedCategory, description: e.target.value })}
-                  rows={3}
-                  className="resize-none bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600 rounded-md px-3 py-2"
-                />
-              </div>
-              
-              {selectedCategory.subcategories && selectedCategory.subcategories.length > 0 && (
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-teal-200">
-                    Subcategorias
-                  </label>
-                  <div className="space-y-2 p-3 rounded-md bg-teal-800/20 border border-teal-700/50">
-                    {selectedCategory.subcategories.map((subcategory) => (
-                      <div key={subcategory.id} className="flex justify-between items-center p-2 rounded-md bg-teal-700/30 hover:bg-teal-700/50 transition-colors">
-                        <span className="text-teal-100">{subcategory.name}</span>
-                        <div className="flex space-x-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setSelectedSubcategory(subcategory);
-                              setIsEditSubcategoryDialogOpen(true);
-                            }}
-                            className="h-8 w-8 rounded-full p-0 text-teal-200 hover:text-teal-50 hover:bg-teal-600/50"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteSubcategory(subcategory.id)}
-                            className="h-8 w-8 rounded-full p-0 text-red-300 hover:text-red-100 hover:bg-red-600/50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                id="subcategory-name"
+                name="name"
+                placeholder="Ex: Manga Longa"
+                value={newSubcategory.name}
+                onChange={handleSubcategoryInputChange}
+              />
             </div>
-            
-            <div className="flex justify-end gap-2 mt-4">
+          </div>
+          <div className="flex justify-end space-x-2">
               <Button
-                type="button"
                 variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-                className="bg-transparent border-teal-600 text-teal-100 hover:bg-teal-800 hover:text-teal-50"
+              onClick={() => setIsAddSubcategoryDialogOpen(false)}
               >
                 Cancelar
               </Button>
               <Button
-                type="button"
-                onClick={handleUpdateCategory}
+              onClick={handleAddSubcategory}
                 disabled={isSubmitting}
-                className="bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processando...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
                   </>
                 ) : (
-                  'Salvar Alterações'
+                "Adicionar Subcategoria"
                 )}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
-      )}
 
-      {/* Modal de edição de subcategoria */}
-      {selectedSubcategory && (
-        <Dialog open={isEditSubcategoryDialogOpen} onOpenChange={setIsEditSubcategoryDialogOpen}>
-          <DialogContent className="bg-teal-900 border-teal-700 text-teal-50 rounded-xl shadow-xl">
+      {/* Diálogo para gerenciar imagens de categoria */}
+      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+        <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold text-teal-50">Editar Subcategoria</DialogTitle>
+            <DialogTitle>
+              Gerenciar Imagem da Categoria: {selectedCategoryForImage?.name}
+            </DialogTitle>
             </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <label htmlFor="edit-subcat-name" className="text-sm font-medium text-teal-200">
-                  Nome da Subcategoria
-                </label>
-                <Input
-                  id="edit-subcat-name"
-                  value={selectedSubcategory.name}
-                  onChange={(e) => setSelectedSubcategory({ ...selectedSubcategory, name: e.target.value })}
-                  className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
+          <div className="space-y-6 py-4">
+            <div className="grid gap-6 grid-cols-2">
+              <div>
+                <h3 className="font-medium mb-2">Upload de Imagem</h3>
+                <S3ImageUpload 
+                  onSuccess={handleImageUploadSuccess}
+                  buttonText="Selecionar Imagem"
                 />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Formatos aceitos: JPG, PNG, WebP. Tamanho máximo: 5MB.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-medium mb-2">Pré-visualização</h3>
+                {uploadedImageUrl ? (
+                  <div className="border rounded-md p-2 h-48 flex items-center justify-center bg-gray-50">
+                    <img 
+                      src={uploadedImageUrl} 
+                      alt="Pré-visualização" 
+                      className="max-h-44 max-w-full object-contain" 
+                    />
+                  </div>
+                ) : (
+                  <div className="border rounded-md p-2 h-48 flex items-center justify-center bg-gray-50">
+                    <div className="text-center text-muted-foreground">
+                      <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                      <p>Nenhuma imagem selecionada</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="border-t pt-4">
+              <p className="text-sm text-muted-foreground mb-2">
+                Esta imagem será exibida na página principal da loja e nas listagens de categorias.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
               <Button
-                type="button"
                 variant="outline"
-                onClick={() => setIsEditSubcategoryDialogOpen(false)}
-                className="bg-transparent border-teal-600 text-teal-100 hover:bg-teal-800 hover:text-teal-50"
+              onClick={() => setIsImageDialogOpen(false)}
               >
                 Cancelar
               </Button>
               <Button
-                type="button"
-                onClick={handleAddSubcategory}
-                disabled={isSubmitting}
-                className="bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white"
+              onClick={handleSaveImage}
+              disabled={isSubmitting || !uploadedImageUrl}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processando...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
                   </>
                 ) : (
-                  'Salvar Alterações'
+                "Salvar Imagem"
                 )}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
-      )}
     </AdminLayout>
   );
 } 

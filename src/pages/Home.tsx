@@ -6,7 +6,8 @@ import { Link } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProductCard } from "@/components/product/ProductCard";
+import { useSiteImages, IMAGE_TYPES } from "@/hooks/useSiteImages";
+import { useEffect, useState } from "react";
 
 // Categorias temporárias para exibição enquanto carrega ou se não houver categorias
 const defaultCategories = [
@@ -50,6 +51,13 @@ const createSlug = (name: string) => {
 export default function Home() {
   const { products, loading: productsLoading } = useProducts();
   const { categories, loading: categoriesLoading } = useCategories();
+  const { images: categoryImages, loading: imagesLoading } = useSiteImages({ 
+    type: IMAGE_TYPES.CATEGORY, 
+    activeOnly: true 
+  });
+  
+  const [categoriesWithImages, setCategoriesWithImages] = useState<any[]>([]);
+  const loading = categoriesLoading || imagesLoading;
 
   // Filtrar produtos mais recentes (por data de criação)
   const newArrivals = [...products]
@@ -58,6 +66,25 @@ export default function Home() {
   
   // Mostrar todos os produtos como destaques por enquanto
   const featuredProducts = products.slice(0, 4);
+
+  // Construir a lista de categorias com suas imagens quando os dados estiverem disponíveis
+  useEffect(() => {
+    if (!categoriesLoading && !imagesLoading) {
+      const mappedCategories = categories.map(category => {
+        // Encontrar a imagem correspondente a esta categoria
+        const categoryImage = categoryImages.find(img => img.reference_id === category.id);
+        
+        return {
+          id: category.id,
+          name: category.name,
+          image: categoryImage?.image_url || "https://images.unsplash.com/photo-1516478177764-9fe5bd7e9717?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+          path: categoryImage?.link || `/categoria/${category.id}`
+        };
+      });
+      
+      setCategoriesWithImages(mappedCategories);
+    }
+  }, [categories, categoryImages, categoriesLoading, imagesLoading]);
 
   return (
     <Layout>
@@ -100,28 +127,54 @@ export default function Home() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {(categoriesLoading ? defaultCategories : categories.map(cat => ({
-                name: cat.name,
-                image: "https://images.unsplash.com/photo-1516478177764-9fe5bd7e9717?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
-                path: `/categoria/${createSlug(cat.name)}`
-              }))).map((category) => (
-                <Link 
-                  to={category.path} 
-                  key={category.name}
-                  className="group relative h-64 rounded-lg overflow-hidden shadow"
-                >
-                  <div 
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-110"
-                    style={{ backgroundImage: `url(${category.image})` }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/20" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <h3 className="text-2xl font-bold text-white text-center">
-                      {category.name}
-                    </h3>
+              {loading ? (
+                // Placeholders de carregamento
+                Array(6).fill(0).map((_, index) => (
+                  <div key={index} className="relative h-64 rounded-lg overflow-hidden shadow">
+                    <Skeleton className="absolute inset-0" />
                   </div>
-                </Link>
-              ))}
+                ))
+              ) : categoriesWithImages.length > 0 ? (
+                // Exibir categorias com suas imagens
+                categoriesWithImages.map((category) => (
+                  <Link 
+                    to={category.path} 
+                    key={category.id}
+                    className="group relative h-64 rounded-lg overflow-hidden shadow"
+                  >
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-110"
+                      style={{ backgroundImage: `url(${category.image})` }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/20" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <h3 className="text-2xl font-bold text-white text-center">
+                        {category.name}
+                      </h3>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                // Mostrar categorias padrão se não houver dados
+                defaultCategories.map((category, index) => (
+                  <Link 
+                    to={category.path} 
+                    key={index}
+                    className="group relative h-64 rounded-lg overflow-hidden shadow"
+                  >
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-hover:scale-110"
+                      style={{ backgroundImage: `url(${category.image})` }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/20" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <h3 className="text-2xl font-bold text-white text-center">
+                        {category.name}
+                      </h3>
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </section>
           
@@ -152,39 +205,21 @@ export default function Home() {
             />
           )}
           
-          {/* Grid de Produtos */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
-            {productsLoading ? (
-              // Skeletons para carregamento
-              Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="bg-white rounded-lg shadow-md p-4 animate-pulse">
-                  <div className="w-full h-48 bg-gray-200 rounded-lg mb-4" />
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-                  <div className="h-4 bg-gray-200 rounded w-1/2" />
-                </div>
-              ))
-            ) : (
-              products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))
-            )}
-          </div>
-
-          {/* Seção de Newsletter */}
-          <section className="mb-16 bg-sport-dark text-white rounded-lg p-4 sm:p-8 md:p-12">
+          {/* Newsletter */}
+          <section className="mb-16 bg-sport-dark text-white rounded-lg p-8 md:p-12">
             <div className="max-w-2xl mx-auto text-center">
-              <h2 className="text-2xl sm:text-3xl font-bold mb-4">Fique por dentro das novidades</h2>
-              <p className="text-base sm:text-lg mb-6 text-gray-300">
+              <h2 className="text-3xl font-bold mb-4">Fique por dentro das novidades</h2>
+              <p className="text-lg mb-6 text-gray-300">
                 Inscreva-se para receber atualizações sobre novos produtos e ofertas especiais.
               </p>
               
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 max-w-md mx-auto">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-0">
                 <input
                   type="email"
                   placeholder="Seu melhor e-mail"
-                  className="flex-1 px-4 py-3 rounded-lg sm:rounded-l-lg sm:rounded-r-none text-gray-900 focus:outline-none"
+                  className="flex-1 px-4 py-3 rounded-l-lg text-gray-900 focus:outline-none sm:rounded-r-none rounded-r-lg"
                 />
-                <Button className="bg-sport-blue hover:bg-blue-600 sm:rounded-l-none sm:rounded-r-lg w-full sm:w-auto">
+                <Button className="bg-sport-blue hover:bg-blue-600 sm:rounded-l-none rounded-l-lg">
                   Inscrever-se
                 </Button>
               </div>

@@ -221,7 +221,7 @@ export default function ProductManagement() {
             selectedProduct.image_url.trim() !== '') {
           console.log(`[${loadingId}] Usando image_url do produto como imagem principal`);
           // Criar uma entrada temporária para exibir a imagem principal do produto
-          const tempImages = [{
+          const tempImages: ProductImage[] = [{
             id: 'main', // ID temporário
             product_id: productId,
             storage_path: selectedProduct.image_url,
@@ -315,97 +315,31 @@ export default function ProductManagement() {
   const handleUpdateProduct = async () => {
     if (!selectedProduct) return;
     
+    setIsSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
-
-      // Validação básica
-      if (!selectedProduct.name || !selectedProduct.price || !selectedProduct.category_id) {
-        showErrorToast("Por favor, preencha todos os campos obrigatórios.");
-        return;
-      }
-
-      // Verificamos se a categoria selecionada é uma que não tem subcategorias
-      const isCategoryWithoutSubcategories = ['5', '6'].includes(selectedProduct.category_id);
+      // Preparar dados para atualização
+      const updateData: TablesUpdate<"products"> = {
+        name: selectedProduct.name,
+        price: parseFloat(selectedProduct.price.toString()),
+        description: selectedProduct.description,
+        category_id: selectedProduct.category_id,
+        subcategory_id: selectedProduct.subcategory_id || null,
+        updated_at: new Date().toISOString()
+      };
       
-      // Se não temos subcategoria selecionada, vamos criar uma subcategoria padrão ou usar uma existente
-      if (!selectedProduct.subcategory_id || isCategoryWithoutSubcategories) {
-        try {
-          console.log("Edição: Criando ou buscando subcategoria padrão para categoria:", selectedProduct.category_id);
-          
-          // Primeiro, verificamos se já existe uma subcategoria para esta categoria
-          const { data: existingSubcategories } = await supabase
-            .from('subcategories')
-            .select('id, name')
-            .eq('category_id', selectedProduct.category_id);
-          
-          console.log("Edição: Subcategorias existentes:", existingSubcategories);
-          
-          // Se encontramos subcategorias, usamos a primeira. Caso contrário, criamos uma nova.
-          if (existingSubcategories && existingSubcategories.length > 0) {
-            // Usar a primeira subcategoria disponível
-            selectedProduct.subcategory_id = existingSubcategories[0].id;
-            console.log("Edição: Usando subcategoria existente:", existingSubcategories[0]);
-          } else {
-            // Criar uma subcategoria padrão
-            console.log("Edição: Criando nova subcategoria padrão");
-            const { data: newSubcategory, error: subcatError } = await supabase
-              .from('subcategories')
-              .insert({
-                name: 'Padrão',
-                category_id: selectedProduct.category_id,
-                created_at: new Date().toISOString()
-              })
-              .select()
-              .single();
-            
-            if (subcatError) {
-              console.error("Edição: Erro ao criar subcategoria padrão:", subcatError);
-              throw subcatError;
-            }
-            
-            if (newSubcategory) {
-              selectedProduct.subcategory_id = newSubcategory.id;
-              console.log("Edição: Nova subcategoria criada com ID:", newSubcategory.id);
-            } else {
-              throw new Error("Edição: Falha ao criar subcategoria padrão");
-            }
-          }
-        } catch (subcatError) {
-          console.error("Edição: Erro ao processar subcategoria:", subcatError);
-          showErrorToast("Erro ao processar subcategoria. Tente novamente.");
-          setIsSubmitting(false);
-          return;
-        }
+      // Se há uma imagem principal nova e ainda não foi salva, salvar primeiro
+      if (selectedProduct.image_url && !isStoragePath(selectedProduct.image_url) && selectedProduct.image_url !== PLACEHOLDER_IMAGE) {
+        // Não incluir image_url no updateData, será atualizada junto com as imagens do produto
       }
       
-      // Garantir que temos um subcategory_id antes de atualizar o produto
-      if (!selectedProduct.subcategory_id) {
-        console.error("Edição: Falha ao obter subcategory_id");
-        showErrorToast("Erro ao processar subcategoria. Tente novamente.");
-        setIsSubmitting(false);
-        return;
-      }
-      
-      console.log("Edição: Atualizando produto com subcategory_id:", selectedProduct.subcategory_id);
-
-      // Atualizar o produto no banco de dados
+      // Atualizar dados do produto
       const { error } = await supabase
         .from('products')
-        .update({
-          name: selectedProduct.name,
-          price: typeof selectedProduct.price === 'string' 
-            ? parseFloat(selectedProduct.price) 
-            : selectedProduct.price,
-          description: selectedProduct.description,
-          category_id: selectedProduct.category_id,
-          subcategory_id: selectedProduct.subcategory_id
-        })
+        .update(updateData)
         .eq('id', selectedProduct.id);
-
-      if (error) {
-        console.error("Edição: Erro ao atualizar produto:", error);
-        throw error;
-      }
+      
+      if (error) throw error;
       
       // Fazer upload das novas imagens selecionadas
       const uploadPromises = Object.entries(selectedFiles)
@@ -819,39 +753,41 @@ export default function ProductManagement() {
                 Novo Produto
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-teal-900 border-teal-700 text-teal-50 rounded-xl shadow-xl">
+            <DialogContent className="bg-teal-900 border-teal-700 text-teal-50 rounded-xl shadow-xl overflow-y-auto max-h-[95vh] md:max-w-3xl lg:max-w-4xl">
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold text-teal-50">Adicionar Novo Produto</DialogTitle>
               </DialogHeader>
               
               <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <label htmlFor="name" className="text-sm font-medium text-teal-200">
-                    Nome do Produto
-                  </label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={newProduct.name}
-                    onChange={handleInputChange}
-                    placeholder="Ex: Camisa Barcelona Home 2023/24"
-                    className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
-                  />
-                </div>
-                
-                <div className="grid gap-2">
-                  <label htmlFor="price" className="text-sm font-medium text-teal-200">
-                    Preço
-                  </label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    value={newProduct.price}
-                    onChange={handleInputChange}
-                    placeholder="Ex: 299.90"
-                    className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <label htmlFor="name" className="text-sm font-medium text-teal-200">
+                      Nome do Produto
+                    </label>
+                    <Input
+                      id="name"
+                      name="name"
+                      value={newProduct.name}
+                      onChange={handleInputChange}
+                      placeholder="Ex: Camisa Barcelona Home 2023/24"
+                      className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <label htmlFor="price" className="text-sm font-medium text-teal-200">
+                      Preço
+                    </label>
+                    <Input
+                      id="price"
+                      name="price"
+                      type="number"
+                      value={newProduct.price}
+                      onChange={handleInputChange}
+                      placeholder="Ex: 299.90"
+                      className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
+                    />
+                  </div>
                 </div>
                 
                 <div className="grid gap-2">
@@ -869,48 +805,50 @@ export default function ProductManagement() {
                   />
                 </div>
                 
-                <div className="grid gap-2">
-                  <label htmlFor="category_id" className="text-sm font-medium text-teal-200">
-                    Categoria
-                  </label>
-                  <select
-                    id="category_id"
-                    name="category_id"
-                    value={newProduct.category_id}
-                    onChange={handleInputChange as any}
-                    className="bg-teal-800/50 border-teal-700 text-teal-50 focus:border-teal-600 rounded-md px-3 py-2"
-                  >
-                    <option value="">Selecione uma categoria</option>
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                {/* Ocultar campo de subcategoria para categorias sem subcategorias */}
-                {!['5', '6'].includes(newProduct.category_id) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <label htmlFor="subcategory_id" className="text-sm font-medium text-teal-200">
-                      Subcategoria
+                    <label htmlFor="category_id" className="text-sm font-medium text-teal-200">
+                      Categoria
                     </label>
                     <select
-                      id="subcategory_id"
-                      name="subcategory_id"
-                      value={newProduct.subcategory_id}
+                      id="category_id"
+                      name="category_id"
+                      value={newProduct.category_id}
                       onChange={handleInputChange as any}
                       className="bg-teal-800/50 border-teal-700 text-teal-50 focus:border-teal-600 rounded-md px-3 py-2"
                     >
-                      <option value="">Selecione uma subcategoria</option>
-                      {availableSubcategories.map(subcategory => (
-                        <option key={subcategory.id} value={subcategory.id}>
-                          {subcategory.name}
+                      <option value="">Selecione uma categoria</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
                         </option>
                       ))}
                     </select>
                   </div>
-                )}
+                  
+                  {/* Ocultar campo de subcategoria para categorias sem subcategorias */}
+                  {!['5', '6'].includes(newProduct.category_id) && (
+                    <div className="grid gap-2">
+                      <label htmlFor="subcategory_id" className="text-sm font-medium text-teal-200">
+                        Subcategoria
+                      </label>
+                      <select
+                        id="subcategory_id"
+                        name="subcategory_id"
+                        value={newProduct.subcategory_id}
+                        onChange={handleInputChange as any}
+                        className="bg-teal-800/50 border-teal-700 text-teal-50 focus:border-teal-600 rounded-md px-3 py-2"
+                      >
+                        <option value="">Selecione uma subcategoria</option>
+                        {availableSubcategories.map(subcategory => (
+                          <option key={subcategory.id} value={subcategory.id}>
+                            {subcategory.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
                 
                 <div className="grid gap-2">
                   <label htmlFor="image_upload" className="text-sm font-medium text-teal-200">
@@ -918,11 +856,11 @@ export default function ProductManagement() {
                   </label>
                   <div className="flex flex-col items-center p-4 border-2 border-dashed border-teal-700 rounded-md bg-teal-800/30 transition-colors hover:bg-teal-800/50">
                     {previewUrl ? (
-                      <div className="relative w-full max-w-xs">
+                      <div className="relative w-full max-w-xs mx-auto">
                         <img
                           src={previewUrl}
                           alt="Preview"
-                          className="w-full h-auto rounded-md mb-2 object-cover"
+                          className="w-full h-auto max-h-48 rounded-md mb-2 object-contain"
                         />
                         <button
                           type="button"
@@ -936,8 +874,8 @@ export default function ProductManagement() {
                         </button>
                       </div>
                     ) : (
-                      <>
-                        <ImageIcon className="h-12 w-12 text-teal-400 mb-2" />
+                      <div className="w-full text-center py-4">
+                        <ImageIcon className="h-12 w-12 text-teal-400 mb-2 mx-auto" />
                         <p className="text-sm text-teal-200 mb-2">Arraste uma imagem ou clique para fazer upload</p>
                         <input
                           id="image_upload"
@@ -950,12 +888,12 @@ export default function ProductManagement() {
                           type="button"
                           variant="outline"
                           onClick={() => document.getElementById('image_upload')?.click()}
-                          className="bg-teal-700 hover:bg-teal-600 text-teal-50 border-teal-600"
+                          className="bg-teal-700 hover:bg-teal-600 text-teal-50 border-teal-600 mx-auto"
                         >
                           <FileUp className="h-4 w-4 mr-2" />
                           Selecionar Imagem
                         </Button>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1091,38 +1029,40 @@ export default function ProductManagement() {
       {/* Modal de edição de produto (similar ao adicionar, mas com dados pré-preenchidos) */}
       {selectedProduct && (
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="bg-teal-900 border-teal-700 text-teal-50 rounded-xl shadow-xl max-w-4xl">
+          <DialogContent className="bg-teal-900 border-teal-700 text-teal-50 rounded-xl shadow-xl max-w-4xl max-h-[95vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl font-bold text-teal-50">Editar Produto</DialogTitle>
             </DialogHeader>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
               <div className="space-y-4">
-                <div className="grid gap-2">
-                  <label htmlFor="edit-name" className="text-sm font-medium text-teal-200">
-                    Nome do Produto
-                  </label>
-                  <Input
-                    id="edit-name"
-                    name="name"
-                    value={selectedProduct.name}
-                    onChange={handleEditInputChange}
-                    className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
-                  />
-                </div>
-                
-                <div className="grid gap-2">
-                  <label htmlFor="edit-price" className="text-sm font-medium text-teal-200">
-                    Preço
-                  </label>
-                  <Input
-                    id="edit-price"
-                    name="price"
-                    type="number"
-                    value={selectedProduct.price}
-                    onChange={handleEditInputChange}
-                    className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <label htmlFor="edit-name" className="text-sm font-medium text-teal-200">
+                      Nome do Produto
+                    </label>
+                    <Input
+                      id="edit-name"
+                      name="name"
+                      value={selectedProduct.name}
+                      onChange={handleEditInputChange}
+                      className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <label htmlFor="edit-price" className="text-sm font-medium text-teal-200">
+                      Preço
+                    </label>
+                    <Input
+                      id="edit-price"
+                      name="price"
+                      type="number"
+                      value={selectedProduct.price}
+                      onChange={handleEditInputChange}
+                      className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
+                    />
+                  </div>
                 </div>
                 
                 <div className="grid gap-2">
@@ -1139,48 +1079,50 @@ export default function ProductManagement() {
                   />
                 </div>
                 
-                <div className="grid gap-2">
-                  <label htmlFor="edit-category" className="text-sm font-medium text-teal-200">
-                    Categoria
-                  </label>
-                  <select
-                    id="edit-category"
-                    name="category_id"
-                    value={selectedProduct.category_id || ""}
-                    onChange={handleEditInputChange as any}
-                    className="bg-teal-800/50 border-teal-700 text-teal-50 focus:border-teal-600 rounded-md px-3 py-2"
-                  >
-                    <option value="">Selecione uma categoria</option>
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                {/* Ocultar campo de subcategoria para categorias sem subcategorias */}
-                {selectedProduct && !['5', '6'].includes(selectedProduct.category_id) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <label htmlFor="edit-subcategory" className="text-sm font-medium text-teal-200">
-                      Subcategoria
+                    <label htmlFor="edit-category" className="text-sm font-medium text-teal-200">
+                      Categoria
                     </label>
                     <select
-                      id="edit-subcategory"
-                      name="subcategory_id"
-                      value={selectedProduct.subcategory_id || ""}
+                      id="edit-category"
+                      name="category_id"
+                      value={selectedProduct.category_id || ""}
                       onChange={handleEditInputChange as any}
                       className="bg-teal-800/50 border-teal-700 text-teal-50 focus:border-teal-600 rounded-md px-3 py-2"
                     >
-                      <option value="">Selecione uma subcategoria</option>
-                      {editSubcategories.map(subcategory => (
-                        <option key={subcategory.id} value={subcategory.id}>
-                          {subcategory.name}
+                      <option value="">Selecione uma categoria</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
                         </option>
                       ))}
                     </select>
                   </div>
-                )}
+                  
+                  {/* Ocultar campo de subcategoria para categorias sem subcategorias */}
+                  {selectedProduct && !['5', '6'].includes(selectedProduct.category_id || '') && (
+                    <div className="grid gap-2">
+                      <label htmlFor="edit-subcategory" className="text-sm font-medium text-teal-200">
+                        Subcategoria
+                      </label>
+                      <select
+                        id="edit-subcategory"
+                        name="subcategory_id"
+                        value={selectedProduct.subcategory_id || ""}
+                        onChange={handleEditInputChange as any}
+                        className="bg-teal-800/50 border-teal-700 text-teal-50 focus:border-teal-600 rounded-md px-3 py-2"
+                      >
+                        <option value="">Selecione uma subcategoria</option>
+                        {editSubcategories.map(subcategory => (
+                          <option key={subcategory.id} value={subcategory.id}>
+                            {subcategory.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
               </div>
               
               <div className="space-y-4">
@@ -1194,15 +1136,15 @@ export default function ProductManagement() {
                       <Loader2 className="h-8 w-8 animate-spin text-teal-400" />
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-4">
                       {productImages.length > 0 ? (
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {productImages.map((image) => (
-                            <div key={image.id} className="relative border border-teal-700 rounded-md overflow-hidden group">
+                            <div key={image.id} className="relative border border-teal-700 rounded-md overflow-hidden group h-28">
                               <img
                                 src={getCorrectImageUrl(image.storage_path)}
                                 alt={image.alt_text || selectedProduct.name}
-                                className="w-full h-24 object-cover"
+                                className="w-full h-full object-cover"
                                 onError={(e) => {
                                   e.currentTarget.onerror = null;
                                   e.currentTarget.src = PLACEHOLDER_IMAGE;
@@ -1241,9 +1183,9 @@ export default function ProductManagement() {
                         </div>
                       )}
                       
-                      <div className="mt-4">
+                      <div>
                         <h4 className="text-sm font-medium text-teal-200 mb-2">Adicionar Novas Imagens</h4>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {[0, 1, 2].map((index) => (
                             <div 
                               key={index}

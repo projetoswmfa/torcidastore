@@ -1,19 +1,21 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useSiteImages, IMAGE_TYPES } from "@/hooks/useSiteImages";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Banner = {
-  id: number;
+  id: string | number;
   image: string;
   title: string;
   description: string;
   link: string;
 };
 
-const banners: Banner[] = [
+// Banners estáticos como fallback caso não haja banners no banco de dados
+const staticBanners: Banner[] = [
   {
     id: 1,
     image: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80",
@@ -40,11 +42,26 @@ const banners: Banner[] = [
 export function BannerCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAuto, setIsAuto] = useState(true);
+  const { images: dbBanners, loading } = useSiteImages({ 
+    type: IMAGE_TYPES.BANNER,
+    activeOnly: true
+  });
+
+  // Mapear os banners do banco de dados para o formato utilizado pelo carrossel
+  const banners: Banner[] = dbBanners.length > 0 
+    ? dbBanners.map(banner => ({
+        id: banner.id,
+        image: banner.image_url || "",
+        title: banner.title || "",
+        description: banner.description || "",
+        link: banner.link || "#"
+      }))
+    : staticBanners;
 
   useEffect(() => {
     let interval: number | null = null;
     
-    if (isAuto) {
+    if (isAuto && banners.length > 1) {
       interval = window.setInterval(() => {
         setCurrentIndex((prevIndex) => (prevIndex + 1) % banners.length);
       }, 5000);
@@ -53,7 +70,7 @@ export function BannerCarousel() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isAuto]);
+  }, [isAuto, banners.length]);
 
   const nextSlide = () => {
     setIsAuto(false);
@@ -64,6 +81,15 @@ export function BannerCarousel() {
     setIsAuto(false);
     setCurrentIndex((prevIndex) => (prevIndex - 1 + banners.length) % banners.length);
   };
+
+  // Se estiver carregando, mostrar um esqueleto
+  if (loading) {
+    return (
+      <div className="relative h-[400px] md:h-[500px] bg-gray-200 animate-pulse">
+        <Skeleton className="h-full w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-[400px] md:h-[500px] overflow-hidden">
@@ -86,53 +112,59 @@ export function BannerCarousel() {
               <div className="max-w-lg text-white">
                 <h2 className="text-4xl md:text-5xl font-bold mb-4">{banner.title}</h2>
                 <p className="text-xl mb-6">{banner.description}</p>
-                <Link to={banner.link}>
-                  <Button className="bg-sport-blue hover:bg-blue-600 text-white">
-                    Comprar Agora
-                  </Button>
-                </Link>
+                {banner.link && banner.link !== "#" && (
+                  <Link to={banner.link}>
+                    <Button className="bg-sport-blue hover:bg-blue-600 text-white">
+                      Comprar Agora
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Navigation buttons */}
-      <Button
-        variant="outline"
-        size="icon"
-        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/30 backdrop-blur-sm rounded-full hover:bg-white/50"
-        onClick={prevSlide}
-      >
-        <ChevronLeft className="w-5 h-5" />
-      </Button>
-      
-      <Button
-        variant="outline"
-        size="icon"
-        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/30 backdrop-blur-sm rounded-full hover:bg-white/50"
-        onClick={nextSlide}
-      >
-        <ChevronRight className="w-5 h-5" />
-      </Button>
+      {/* Navigation buttons - só exibir se tiver mais de um banner */}
+      {banners.length > 1 && (
+        <>
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/30 backdrop-blur-sm rounded-full hover:bg-white/50"
+            onClick={prevSlide}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/30 backdrop-blur-sm rounded-full hover:bg-white/50"
+            onClick={nextSlide}
+          >
+            <ChevronRight className="w-5 h-5" />
+          </Button>
 
-      {/* Indicators */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
-        {banners.map((_, index) => (
-          <button
-            key={index}
-            className={cn(
-              "w-3 h-3 rounded-full transition-colors",
-              index === currentIndex ? "bg-white" : "bg-white/50"
-            )}
-            onClick={() => {
-              setIsAuto(false);
-              setCurrentIndex(index);
-            }}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
+          {/* Indicators */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+            {banners.map((_, index) => (
+              <button
+                key={index}
+                className={cn(
+                  "w-3 h-3 rounded-full transition-colors",
+                  index === currentIndex ? "bg-white" : "bg-white/50"
+                )}
+                onClick={() => {
+                  setIsAuto(false);
+                  setCurrentIndex(index);
+                }}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

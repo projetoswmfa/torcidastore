@@ -50,14 +50,6 @@ export default function AdminDashboard() {
 
   // Calcular estatísticas em tempo real
   const calculateStats = () => {
-    // Valor total de todas as vendas
-    const totalSales = orders.reduce((sum, order) => {
-      const amount = typeof order.total_amount === 'string' 
-        ? parseFloat(order.total_amount) 
-        : order.total_amount || 0;
-      return sum + amount;
-    }, 0);
-    
     // Valor total de pedidos concluídos
     const completedOrders = orders.filter(order => order.status === 'completed');
     const completedSales = completedOrders.reduce((sum, order) => {
@@ -67,8 +59,18 @@ export default function AdminDashboard() {
       return sum + amount;
     }, 0);
     
+    // Valor total de pedidos pendentes
+    const pendingOrders = orders.filter(order => order.status === 'pending');
+    const pendingSales = pendingOrders.reduce((sum, order) => {
+      const amount = typeof order.total_amount === 'string' 
+        ? parseFloat(order.total_amount) 
+        : order.total_amount || 0;
+      return sum + amount;
+    }, 0);
+    
     // Total de pedidos
     const totalOrders = orders.length;
+    const pendingOrdersCount = pendingOrders.length;
     
     // Contagem de clientes únicos
     const uniqueCustomers = new Set(orders.map(order => order.customer_whatsapp)).size;
@@ -82,7 +84,7 @@ export default function AdminDashboard() {
         value: new Intl.NumberFormat('pt-BR', {
           style: 'currency',
           currency: 'BRL'
-        }).format(totalSales),
+        }).format(completedSales),
         icon: DollarSign,
         change: "+8%",
         trend: "up",
@@ -104,6 +106,19 @@ export default function AdminDashboard() {
         color: "from-teal-400 to-teal-500"
       },
       {
+        title: "Vendas Totais Pendentes",
+        value: new Intl.NumberFormat('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        }).format(pendingSales),
+        icon: DollarSign,
+        change: "+5%",
+        trend: "up",
+        details: "vs. mês anterior",
+        chart: [5, 15, 10, 25, 20, 30, 25, 35, 30, 40], // Dados simulados para o mini-gráfico
+        color: "from-amber-400 to-amber-500"
+      },
+      {
         title: "Pedidos",
         value: totalOrders.toString(),
         icon: ShoppingCart,
@@ -112,6 +127,16 @@ export default function AdminDashboard() {
         details: "vs. mês anterior",
         chart: [20, 40, 30, 50, 45, 60, 75, 70, 90, 80], // Dados simulados para o mini-gráfico
         color: "from-cyan-500 to-cyan-600"
+      },
+      {
+        title: "Pedidos Pendentes",
+        value: pendingOrdersCount.toString(),
+        icon: ShoppingCart,
+        change: "+10%",
+        trend: "up",
+        details: "vs. mês anterior",
+        chart: [10, 20, 15, 25, 20, 30, 35, 30, 40, 35], // Dados simulados para o mini-gráfico
+        color: "from-amber-500 to-amber-600"
       },
       {
         title: "Clientes",

@@ -17,6 +17,7 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import ProductManagement from "./pages/admin/ProductManagement";
 import CategoryManagement from "./pages/admin/CategoryManagement";
 import OrderManagement from "./pages/admin/OrderManagement";
+import BannerManagement from "./pages/admin/BannerManagement";
 import NotFound from "./pages/NotFound";
 import AuthDiagnostic from "./pages/AuthDiagnostic";
 import CategoryProducts from "./pages/CategoryProducts";
@@ -70,6 +71,11 @@ const App = () => {
                 <Route path="/admin/pedidos" element={
                   <ProtectedRoute requireAdmin>
                     <OrderManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/banners" element={
+                  <ProtectedRoute requireAdmin>
+                    <BannerManagement />
                   </ProtectedRoute>
                 } />
                 

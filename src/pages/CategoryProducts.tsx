@@ -8,6 +8,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
 import { PLACEHOLDER_IMAGE_BASE64 } from "@/utils/imageUtil";
+import { useSiteImages, IMAGE_TYPES } from "@/hooks/useSiteImages";
 
 // Função auxiliar para verificar correspondência de categorias
 const matchCategory = (category: any, names: string[]): boolean => {
@@ -32,8 +33,15 @@ export default function CategoryProducts() {
   const { categoryId } = useParams<{ categoryId: string }>();
   const { products, loading: productsLoading } = useProducts();
   const { categories, loading: categoriesLoading } = useCategories();
+  const { images: categoryImages, loading: imagesLoading } = useSiteImages({ 
+    type: IMAGE_TYPES.CATEGORY, 
+    activeOnly: true 
+  });
+
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [categoryName, setCategoryName] = useState<string>("");
+  const [categoryData, setCategoryData] = useState<{id: string, name: string} | null>(null);
+  const [categoryImage, setCategoryImage] = useState<string | null>(null);
   
   useEffect(() => {
     // Adicionar logs para debug
@@ -62,6 +70,7 @@ export default function CategoryProducts() {
       if (categoryById) {
         console.log('Categoria encontrada pelo ID:', categoryById);
         setCategoryName(categoryById.name);
+        setCategoryData({id: categoryById.id, name: categoryById.name});
         foundCategory = true;
         
         const filtered = products.filter(product => 
@@ -80,6 +89,7 @@ export default function CategoryProducts() {
       if (categoryBySlug) {
         console.log('Categoria encontrada pelo slug:', categoryBySlug);
         setCategoryName(categoryBySlug.name);
+        setCategoryData({id: categoryBySlug.id, name: categoryBySlug.name});
         foundCategory = true;
         
         const filtered = products.filter(product => 
@@ -93,10 +103,12 @@ export default function CategoryProducts() {
       // Casos especiais para categorias estáticas
       if (!foundCategory) {
         let filtered: Product[] = [];
+        let categoryInfo = { id: '', name: '' };
         
         switch(categoryId) {
           case 'brasileiros':
             setCategoryName('TIMES BRASILEIROS');
+            categoryInfo = { id: '1', name: 'TIMES BRASILEIROS' };
             filtered = products.filter(product => 
               matchCategory(product.category, ['Times Brasileiros', 'TIMES BRASILEIROS', 'Brasileiros']) ||
               product.category_id === '1' // ID da categoria Times Brasileiros conforme ProductForm
@@ -105,6 +117,7 @@ export default function CategoryProducts() {
             break;
           case 'internacionais':
             setCategoryName('INTERNACIONAIS');
+            categoryInfo = { id: '2', name: 'INTERNACIONAIS' };
             filtered = products.filter(product => 
               matchCategory(product.category, ['Internacionais', 'INTERNACIONAIS', 'Times Europeus', 'TIMES EUROPEUS']) ||
               product.category_id === '2' // ID da categoria Internacionais conforme ProductForm
@@ -113,6 +126,7 @@ export default function CategoryProducts() {
             break;
           case 'selecoes':
             setCategoryName('SELEÇÕES');
+            categoryInfo = { id: '3', name: 'SELEÇÕES' };
             filtered = products.filter(product => 
               matchCategory(product.category, ['Seleções', 'SELEÇÕES', 'Selecoes', 'SELECOES']) ||
               product.category_id === '3' // ID da categoria Seleções conforme ProductForm
@@ -121,6 +135,7 @@ export default function CategoryProducts() {
             break;
           case 'europeus': // Manter compatibilidade com links antigos
             setCategoryName('INTERNACIONAIS');
+            categoryInfo = { id: '2', name: 'INTERNACIONAIS' };
             filtered = products.filter(product => 
               matchCategory(product.category, ['Internacionais', 'INTERNACIONAIS', 'Times Europeus', 'TIMES EUROPEUS']) ||
               product.category_id === '2' // ID da categoria Internacionais conforme ProductForm
@@ -129,6 +144,7 @@ export default function CategoryProducts() {
             break;
           case 'retro':
             setCategoryName('RETRÔ');
+            categoryInfo = { id: '4', name: 'RETRÔ' };
             filtered = products.filter(product => 
               matchCategory(product.category, ['Retrô', 'RETRÔ', 'Retro', 'RETRO']) ||
               product.category_id === '4' // ID da categoria Retrô conforme ProductForm
@@ -137,6 +153,7 @@ export default function CategoryProducts() {
             break;
           case 'conjuntos':
             setCategoryName('CONJUNTOS');
+            categoryInfo = { id: '5', name: 'CONJUNTOS' };
             filtered = products.filter(product => 
               matchCategory(product.category, ['Conjuntos', 'CONJUNTOS']) ||
               product.category_id === '5' // ID da categoria Conjuntos conforme ProductForm
@@ -145,6 +162,7 @@ export default function CategoryProducts() {
             break;
           case 'inverno':
             setCategoryName('INVERNO');
+            categoryInfo = { id: '6', name: 'INVERNO' };
             filtered = products.filter(product => 
               matchCategory(product.category, ['Inverno', 'INVERNO']) ||
               product.category_id === '6' // ID da categoria Inverno conforme ProductForm
@@ -153,6 +171,7 @@ export default function CategoryProducts() {
             break;
           case 'lancamentos':
             setCategoryName('LANÇAMENTOS');
+            categoryInfo = { id: '0', name: 'LANÇAMENTOS' };
             filtered = [...products]
               .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
               .slice(0, 10);
@@ -160,6 +179,7 @@ export default function CategoryProducts() {
             break;
           case 'promocoes':
             setCategoryName('PROMOÇÕES');
+            categoryInfo = { id: '0', name: 'PROMOÇÕES' };
             // Para promoções, podemos considerar todos os produtos por enquanto
             filtered = products;
             console.log('Produtos filtrados para PROMOÇÕES:', filtered);
@@ -171,10 +191,20 @@ export default function CategoryProducts() {
         }
         
         console.log('Produtos filtrados por caso especial:', filtered);
+        setCategoryData({id: categoryInfo.id, name: categoryInfo.name});
         setFilteredProducts(filtered);
       }
     }
   }, [categoryId, products, productsLoading, categories, categoriesLoading]);
+
+  // Procurar a imagem da categoria sempre que categoryData mudar
+  useEffect(() => {
+    if (!imagesLoading && categoryData?.id && categoryImages.length > 0) {
+      // Encontrar a imagem correspondente à categoria
+      const image = categoryImages.find(img => img.reference_id === categoryData.id);
+      setCategoryImage(image?.image_url || null);
+    }
+  }, [categoryData, categoryImages, imagesLoading]);
   
   // Função para debug - mostra informações detalhadas no console
   const debugCategories = () => {
@@ -262,56 +292,74 @@ export default function CategoryProducts() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8 animate-fade-in">
-        <div className="mb-4 flex justify-between items-center">
-          <div>
-            <Link to="/" className="text-sm text-gray-500 hover:text-gray-700">
-              Home
-            </Link>{" "}
-            /{" "}
-            <span className="text-sm text-gray-700">{categoryName || categoryId}</span>
+      <div className="animate-fade-in">
+        {/* Banner da categoria se existir uma imagem */}
+        {categoryImage && (
+          <div className="relative h-64 w-full mb-6">
+            <div 
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${categoryImage})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/20" />
+            <div className="container mx-auto px-4 h-full flex items-center justify-center">
+              <h1 className="text-4xl font-bold text-white text-center">
+                {categoryName}
+              </h1>
+            </div>
+          </div>
+        )}
+
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-4 flex justify-between items-center">
+            <div>
+              <Link to="/" className="text-sm text-gray-500 hover:text-gray-700">
+                Home
+              </Link>{" "}
+              /{" "}
+              <span className="text-sm text-gray-700">{categoryName || categoryId}</span>
+            </div>
+            
+            {/* Botão de debug - visível apenas em ambiente de desenvolvimento */}
+            {process.env.NODE_ENV === 'development' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={debugCategories}
+                className="flex items-center gap-1 text-xs opacity-30 hover:opacity-100"
+              >
+                <Shield className="h-3 w-3" />
+                <span>Debug</span>
+              </Button>
+            )}
           </div>
           
-          {/* Botão de debug - visível apenas em ambiente de desenvolvimento */}
-          {process.env.NODE_ENV === 'development' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={debugCategories}
-              className="flex items-center gap-1 text-xs opacity-30 hover:opacity-100"
-            >
-              <Shield className="h-3 w-3" />
-              <span>Debug</span>
-            </Button>
+          {productsLoading || categoriesLoading ? (
+            <div className="mb-16">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-bold text-gray-800">Carregando produtos...</h2>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {Array(8).fill(0).map((_, index) => (
+                  <div key={index} className="bg-white rounded-lg overflow-hidden shadow">
+                    <Skeleton className="aspect-[3/4] w-full" />
+                    <div className="p-4">
+                      <Skeleton className="h-4 w-3/4 mb-2" />
+                      <Skeleton className="h-4 w-1/2 mb-4" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <ProductGrid
+              title={!categoryImage ? (categoryName || `Categoria: ${categoryId}`) : ""}
+              products={displayedProducts}
+              emptyMessage="Nenhum produto encontrado nesta categoria"
+              className="mb-16"
+            />
           )}
         </div>
-        
-        {productsLoading || categoriesLoading ? (
-          <div className="mb-16">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-gray-800">Carregando produtos...</h2>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {Array(8).fill(0).map((_, index) => (
-                <div key={index} className="bg-white rounded-lg overflow-hidden shadow">
-                  <Skeleton className="aspect-[3/4] w-full" />
-                  <div className="p-4">
-                    <Skeleton className="h-4 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-1/2 mb-4" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <ProductGrid
-            title={categoryName || `Categoria: ${categoryId}`}
-            products={displayedProducts}
-            emptyMessage="Nenhum produto encontrado nesta categoria"
-            className="mb-16"
-          />
-        )}
       </div>
     </Layout>
   );
