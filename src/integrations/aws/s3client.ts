@@ -2,7 +2,12 @@
 // Esta integração permite fazer upload de imagens para o AWS S3
 
 // URL base da API S3
-const S3_API_URL = import.meta.env.VITE_AWS_S3_API_URL || 'http://localhost:3001/api/s3';
+const isProduction = import.meta.env.PROD === true;
+const defaultApiUrl = isProduction 
+  ? 'https://torcidastore.com.br/api/s3' // URL de produção
+  : 'http://localhost:3001/api/s3'; // URL de desenvolvimento
+
+const S3_API_URL = import.meta.env.VITE_AWS_S3_API_URL || defaultApiUrl;
 const AWS_S3_BUCKET_NAME = import.meta.env.VITE_AWS_S3_BUCKET_NAME || 'torcidastore';
 const AWS_REGION = import.meta.env.VITE_AWS_REGION || 'sa-east-1';
 
@@ -15,23 +20,30 @@ export async function uploadFileToS3(file: File): Promise<{ key: string; url: st
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${S3_API_URL}/upload`, {
-    method: 'POST',
-    body: formData,
-  });
+  try {
+    console.log(`Enviando upload para: ${S3_API_URL}/upload`);
+    
+    const response = await fetch(`${S3_API_URL}/upload`, {
+      method: 'POST',
+      body: formData,
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Erro ao fazer upload do arquivo');
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: `Erro ${response.status}: ${response.statusText}` }));
+      throw new Error(error.message || 'Erro ao fazer upload do arquivo');
+    }
+
+    const data = await response.json();
+    
+    // Usar a URL retornada diretamente pela API, ou construir baseada no AWS S3 se não estiver presente
+    return {
+      key: data.key,
+      url: data.url || `https://${AWS_S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${data.key}`
+    };
+  } catch (err) {
+    console.error('Erro na requisição de upload:', err);
+    throw err;
   }
-
-  const data = await response.json();
-  
-  // Usar a URL retornada diretamente pela API, ou construir baseada no AWS S3 se não estiver presente
-  return {
-    key: data.key,
-    url: data.url || `https://${AWS_S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${data.key}`
-  };
 }
 
 /**

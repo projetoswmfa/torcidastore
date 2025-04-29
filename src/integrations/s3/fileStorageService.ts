@@ -1,7 +1,13 @@
 // Serviço para interação com a API de armazenamento S3 + Supabase
 import { supabase } from '../supabase/client';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Verificar ambiente e definir URL padrão apropriada
+const isProduction = import.meta.env.PROD === true;
+const defaultApiUrl = isProduction 
+  ? 'https://torcidastore.com.br/api' // URL de produção
+  : 'http://localhost:3000/api'; // URL de desenvolvimento
+
+const API_URL = import.meta.env.VITE_API_URL || defaultApiUrl;
 
 interface FileMetadata {
   id: string;

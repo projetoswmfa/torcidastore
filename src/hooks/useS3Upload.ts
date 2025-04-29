@@ -64,16 +64,24 @@ export function useS3Upload(): UploadHookReturn {
       });
       
       // Envia para o S3
-      const { key, url } = await uploadFileToS3(renamedFile);
-      
-      if (!key || !url) {
-        console.error("Upload para S3 falhou: resposta incompleta", { key, url });
-        throw new Error("Falha no upload para S3: resposta incompleta");
+      try {
+        const { key, url } = await uploadFileToS3(renamedFile);
+        
+        if (!key || !url) {
+          console.error("Upload para S3 falhou: resposta incompleta", { key, url });
+          throw new Error("Falha no upload para S3: resposta incompleta");
+        }
+        
+        console.log("Upload para S3 concluído com sucesso:", { key, url });
+        
+        return { imageUrl: url, key };
+      } catch (uploadErr) {
+        console.error("Erro no upload para S3:", uploadErr);
+        const errorMsg = uploadErr instanceof Error 
+          ? uploadErr.message 
+          : 'Falha na comunicação com o servidor de upload';
+        throw new Error(`Erro ao fazer upload da imagem: ${errorMsg}`);
       }
-      
-      console.log("Upload para S3 concluído com sucesso:", { key, url });
-      
-      return { imageUrl: url, key };
     } catch (err) {
       console.error("Erro em uploadImage:", err);
       const errorToSet = err instanceof Error ? err : new Error('Erro desconhecido no upload');
