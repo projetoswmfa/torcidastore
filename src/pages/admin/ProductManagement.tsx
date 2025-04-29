@@ -13,7 +13,8 @@ import {
   Loader2,
   X,
   Star,
-  ImageIcon
+  ImageIcon,
+  Link
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +25,7 @@ import { useS3Upload } from "@/hooks/useS3Upload";
 import { v4 as uuidv4 } from 'uuid';
 import { S3ImageUpload } from "@/components/ui/S3ImageUpload";
 import { TablesUpdate } from "@/integrations/supabase/types";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 // Interface para as imagens do produto
 interface ProductImage {
@@ -854,48 +856,142 @@ export default function ProductManagement() {
                   <label htmlFor="image_upload" className="text-sm font-medium text-teal-200">
                     Imagem do Produto
                   </label>
-                  <div className="flex flex-col items-center p-4 border-2 border-dashed border-teal-700 rounded-md bg-teal-800/30 transition-colors hover:bg-teal-800/50">
-                    {previewUrl ? (
-                      <div className="relative w-full max-w-xs mx-auto">
-                        <img
-                          src={previewUrl}
-                          alt="Preview"
-                          className="w-full h-auto max-h-48 rounded-md mb-2 object-contain"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedFile(null);
-                            setPreviewUrl(null);
-                          }}
-                          className="absolute top-2 right-2 p-1 bg-teal-900/70 rounded-full hover:bg-teal-900 text-teal-100"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
+                  <Tabs defaultValue="upload" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-teal-700">
+                      <TabsTrigger value="upload" className="data-[state=active]:bg-teal-600">
+                        Upload de Arquivo
+                      </TabsTrigger>
+                      <TabsTrigger value="url" className="data-[state=active]:bg-teal-600">
+                        URL da Imagem
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="upload">
+                      <div className="flex flex-col items-center p-4 border-2 border-dashed border-teal-700 rounded-md bg-teal-800/30 transition-colors hover:bg-teal-800/50">
+                        {previewUrl ? (
+                          <div className="relative w-full max-w-xs mx-auto">
+                            <img
+                              src={previewUrl}
+                              alt="Preview"
+                              className="w-full h-auto max-h-48 rounded-md mb-2 object-contain"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedFile(null);
+                                setPreviewUrl(null);
+                              }}
+                              className="absolute top-2 right-2 p-1 bg-teal-900/70 rounded-full hover:bg-teal-900 text-teal-100"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="w-full text-center py-4">
+                            <ImageIcon className="h-12 w-12 text-teal-400 mb-2 mx-auto" />
+                            <p className="text-sm text-teal-200 mb-2">Arraste uma imagem ou clique para fazer upload</p>
+                            <input
+                              id="image_upload"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFileChange}
+                              className="hidden"
+                            />
+                            <Button 
+                              type="button"
+                              variant="outline"
+                              onClick={() => document.getElementById('image_upload')?.click()}
+                              className="bg-teal-700 hover:bg-teal-600 text-teal-50 border-teal-600 mx-auto"
+                            >
+                              <FileUp className="h-4 w-4 mr-2" />
+                              Selecionar Imagem
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="w-full text-center py-4">
-                        <ImageIcon className="h-12 w-12 text-teal-400 mb-2 mx-auto" />
-                        <p className="text-sm text-teal-200 mb-2">Arraste uma imagem ou clique para fazer upload</p>
-                        <input
-                          id="image_upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFileChange}
-                          className="hidden"
-                        />
-                        <Button 
-                          type="button"
-                          variant="outline"
-                          onClick={() => document.getElementById('image_upload')?.click()}
-                          className="bg-teal-700 hover:bg-teal-600 text-teal-50 border-teal-600 mx-auto"
-                        >
-                          <FileUp className="h-4 w-4 mr-2" />
-                          Selecionar Imagem
-                        </Button>
+                    </TabsContent>
+                    
+                    <TabsContent value="url">
+                      <div className="p-4 border-2 border-teal-700 rounded-md bg-teal-800/30">
+                        {previewUrl ? (
+                          <div className="relative w-full max-w-xs mx-auto mb-4">
+                            <img
+                              src={previewUrl}
+                              alt="Preview"
+                              className="w-full h-auto max-h-48 rounded-md mb-2 object-contain"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedFile(null);
+                                setPreviewUrl(null);
+                                setNewProduct(prev => ({ ...prev, image_url: PLACEHOLDER_IMAGE }));
+                              }}
+                              className="absolute top-2 right-2 p-1 bg-teal-900/70 rounded-full hover:bg-teal-900 text-teal-100"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="w-full text-center mb-4">
+                            <Link className="h-12 w-12 text-teal-400 mb-2 mx-auto" />
+                            <p className="text-sm text-teal-200 mb-2">Insira uma URL de imagem</p>
+                          </div>
+                        )}
+                        
+                        <div className="space-y-4">
+                          <div className="flex flex-col space-y-2">
+                            <Input
+                              id="image_url"
+                              type="url"
+                              placeholder="Cole a URL da imagem aqui (https://...)"
+                              className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50"
+                              value={typeof newProduct.image_url === 'string' && newProduct.image_url !== PLACEHOLDER_IMAGE ? newProduct.image_url : ''}
+                              onChange={(e) => {
+                                setNewProduct(prev => ({ ...prev, image_url: e.target.value }));
+                              }}
+                            />
+                            <p className="text-xs text-teal-300/70 text-left">
+                              Cole uma URL direta para uma imagem (ex: https://exemplo.com/imagem.jpg)
+                            </p>
+                          </div>
+                          
+                          <Button
+                            type="button"
+                            className="w-full bg-teal-700 hover:bg-teal-600 text-teal-50 border-teal-600"
+                            onClick={() => {
+                              if (!newProduct.image_url || newProduct.image_url === PLACEHOLDER_IMAGE) {
+                                toast.error("Por favor, insira uma URL de imagem");
+                                return;
+                              }
+                              
+                              // Validar se a URL parece ser uma imagem
+                              if (!newProduct.image_url.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+                                toast.error("A URL deve apontar para uma imagem (jpeg, jpg, gif, png, webp)");
+                                return;
+                              }
+                              
+                              // Validar se a imagem carrega
+                              const img = new Image();
+                              img.onload = () => {
+                                setPreviewUrl(newProduct.image_url);
+                                toast.success("Imagem adicionada com sucesso!");
+                              };
+                              
+                              img.onerror = () => {
+                                toast.error("Não foi possível carregar a imagem. Verifique se a URL está correta.");
+                              };
+                              
+                              img.src = newProduct.image_url;
+                            }}
+                          >
+                            <Link className="h-4 w-4 mr-2" />
+                            Usar esta URL
+                          </Button>
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               </div>
               
