@@ -57,6 +57,7 @@ export function useS3Upload(): UploadHookReturn {
       const fileName = `${folder}/${productId}/${Date.now()}.${fileExt}`;
       
       console.log(`Iniciando upload de arquivo para S3: ${fileName}`);
+      console.log(`Ambiente de execução: ${import.meta.env.PROD ? 'Produção' : 'Desenvolvimento'}`);
       
       // Substitui o arquivo original com um novo nome
       const renamedFile = new File([file], fileName, {
@@ -77,6 +78,13 @@ export function useS3Upload(): UploadHookReturn {
         return { imageUrl: url, key };
       } catch (uploadErr) {
         console.error("Erro no upload para S3:", uploadErr);
+        
+        // Analisar se é um erro de rede
+        if (uploadErr instanceof TypeError && uploadErr.message === 'Failed to fetch') {
+          console.error('Erro de conexão de rede. Verifique se a API de upload está disponível.');
+          throw new Error('Erro de conexão com o servidor de upload. Verifique sua conexão de internet.');
+        }
+        
         const errorMsg = uploadErr instanceof Error 
           ? uploadErr.message 
           : 'Falha na comunicação com o servidor de upload';

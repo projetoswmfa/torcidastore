@@ -4,7 +4,7 @@
 // URL base da API S3
 const isProduction = import.meta.env.PROD === true;
 const defaultApiUrl = isProduction 
-  ? 'https://torcidastore.com.br/api/s3' // URL de produção
+  ? 'https://torcida-store.pages.dev/api/s3' // URL de produção na Cloudflare Pages
   : 'http://localhost:3001/api/s3'; // URL de desenvolvimento
 
 const S3_API_URL = import.meta.env.VITE_AWS_S3_API_URL || defaultApiUrl;

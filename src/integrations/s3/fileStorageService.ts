@@ -4,7 +4,7 @@ import { supabase } from '../supabase/client';
 // Verificar ambiente e definir URL padrão apropriada
 const isProduction = import.meta.env.PROD === true;
 const defaultApiUrl = isProduction 
-  ? 'https://torcidastore.com.br/api' // URL de produção
+  ? 'https://torcida-store.pages.dev/api' // URL de produção na Cloudflare Pages
   : 'http://localhost:3000/api'; // URL de desenvolvimento
 
 const API_URL = import.meta.env.VITE_API_URL || defaultApiUrl;
