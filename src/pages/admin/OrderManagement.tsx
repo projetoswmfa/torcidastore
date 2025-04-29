@@ -8,7 +8,8 @@ import {
   Loader2,
   RefreshCcw,
   Eye,
-  FileDown
+  FileDown,
+  Trash
 } from "lucide-react";
 import { useOrders, Order, OrderStatus, orderStatusTranslation } from "@/hooks/useOrders";
 import {
@@ -17,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -26,6 +28,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,10 +50,12 @@ interface SalesStats {
 }
 
 export default function OrderManagement() {
-  const { orders, loading, fetchOrders, updateOrderStatus } = useOrders();
+  const { orders, loading, fetchOrders, updateOrderStatus, deleteOrder } = useOrders();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
   const [salesStats, setSalesStats] = useState<SalesStats>({
     totalSales: 0,
     totalOrders: 0
@@ -121,6 +136,28 @@ export default function OrderManagement() {
     setIsDetailsOpen(true);
   };
 
+  // Função para iniciar processo de exclusão
+  const handleDeleteRequest = (orderId: string) => {
+    setOrderToDelete(orderId);
+    setIsDeleteAlertOpen(true);
+  };
+
+  // Função para confirmar e excluir pedido
+  const handleConfirmDelete = async () => {
+    if (!orderToDelete) return;
+    
+    try {
+      await deleteOrder(orderToDelete);
+      // Recalcular estatísticas após exclusão
+      calculateSalesStats();
+    } catch (error) {
+      console.error('Erro ao excluir pedido:', error);
+    } finally {
+      setOrderToDelete(null);
+      setIsDeleteAlertOpen(false);
+    }
+  };
+
   // Função para atualizar o status do pedido
   const handleStatusChange = async (orderId: string, status: OrderStatus) => {
     // Se o status está sendo alterado para 'completed', atualize o total de vendas
@@ -158,8 +195,17 @@ export default function OrderManagement() {
   };
 
   // Formatar preço para exibição
-  const formatPrice = (price: number | string) => {
-    const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
+  const formatPrice = (price: number | string | unknown) => {
+    let numericPrice: number;
+    
+    if (typeof price === 'string') {
+      numericPrice = parseFloat(price) || 0;
+    } else if (typeof price === 'number') {
+      numericPrice = price;
+    } else {
+      numericPrice = 0;
+    }
+    
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
@@ -178,7 +224,7 @@ export default function OrderManagement() {
       order.customer_whatsapp,
       order.customer_cep,
       order.customer_address,
-      formatPrice(parseFloat(order.total_amount)),
+      formatPrice(String(parseFloat(order.total_amount))),
       orderStatusTranslation[order.status as OrderStatus],
       formatDate(order.created_at)
     ]);
@@ -321,7 +367,7 @@ export default function OrderManagement() {
                       {formatDate(order.created_at)}
                     </TableCell>
                     <TableCell className="text-teal-200 font-medium">
-                      {formatPrice(parseFloat(order.total_amount))}
+                      {formatPrice(String(order.total_amount))}
                     </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(order.status)}>
@@ -369,6 +415,16 @@ export default function OrderManagement() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleDeleteRequest(order.id)}
+                          className="bg-red-700 border-red-600 text-red-50 hover:bg-red-600 hover:text-white rounded-lg flex items-center gap-1"
+                        >
+                          <Trash className="h-3.5 w-3.5" />
+                          <span>Excluir</span>
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -444,9 +500,9 @@ export default function OrderManagement() {
                         </td>
                         <td className="py-2 px-2 text-teal-100">{item.size}</td>
                         <td className="py-2 px-2 text-teal-100">{item.quantity}</td>
-                        <td className="py-2 px-2 text-right text-teal-100">{formatPrice(parseFloat(item.price))}</td>
+                        <td className="py-2 px-2 text-right text-teal-100">{formatPrice(item.price)}</td>
                         <td className="py-2 px-2 text-right text-teal-100 font-medium">
-                          {formatPrice(parseFloat(item.price) * item.quantity)}
+                          {formatPrice(item.price * item.quantity)}
                         </td>
                       </tr>
                     ))}
@@ -455,7 +511,7 @@ export default function OrderManagement() {
                     <tr className="bg-teal-800/50">
                       <td colSpan={4} className="py-2 px-2 text-right font-medium text-teal-100">Total</td>
                       <td className="py-2 px-2 text-right font-bold text-teal-50">
-                        {formatPrice(parseFloat(selectedOrder.total_amount))}
+                        {formatPrice(selectedOrder.total_amount)}
                       </td>
                     </tr>
                   </tfoot>
@@ -465,6 +521,29 @@ export default function OrderManagement() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Dialog de confirmação para exclusão */}
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent className="bg-teal-900 border-teal-700 text-teal-50">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Pedido</AlertDialogTitle>
+            <AlertDialogDescription className="text-teal-300">
+              Tem certeza que deseja excluir este pedido? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-teal-800 text-teal-100 hover:bg-teal-700 border-teal-600">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-700 text-white hover:bg-red-600"
+              onClick={handleConfirmDelete}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 } 

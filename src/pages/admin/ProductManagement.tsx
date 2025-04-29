@@ -320,15 +320,43 @@ export default function ProductManagement() {
     setIsSubmitting(true);
     
     try {
+      console.log("Valor do preço antes da conversão:", selectedProduct.price, typeof selectedProduct.price);
+      
+      // Converter preço para número
+      let priceValue: number;
+      if (typeof selectedProduct.price === 'string') {
+        // Limpar formatação de moeda se necessário (remove R$, pontos e troca vírgula por ponto)
+        const cleanPrice = selectedProduct.price.replace(/[R$\s.]/g, '').replace(',', '.');
+        priceValue = parseFloat(cleanPrice);
+        if (isNaN(priceValue)) {
+          toast.error("Preço inválido. Por favor, insira um valor numérico.");
+          setIsSubmitting(false);
+          return;
+        }
+      } else if (typeof selectedProduct.price === 'number') {
+        priceValue = selectedProduct.price;
+      } else {
+        toast.error("Formato de preço inválido.");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      console.log("Valor do preço após conversão:", priceValue);
+      
       // Preparar dados para atualização
       const updateData: TablesUpdate<"products"> = {
         name: selectedProduct.name,
-        price: parseFloat(selectedProduct.price.toString()),
+        price: priceValue,
         description: selectedProduct.description,
         category_id: selectedProduct.category_id,
-        subcategory_id: selectedProduct.subcategory_id || null,
         updated_at: new Date().toISOString()
       };
+      
+      // Se o produto tiver uma subcategoria, incluir no update
+      if (selectedProduct.subcategory_id) {
+        // @ts-ignore - Para ignorar o erro de tipo
+        updateData.subcategory_id = selectedProduct.subcategory_id;
+      }
       
       // Se há uma imagem principal nova e ainda não foi salva, salvar primeiro
       if (selectedProduct.image_url && !isStoragePath(selectedProduct.image_url) && selectedProduct.image_url !== PLACEHOLDER_IMAGE) {
@@ -336,12 +364,19 @@ export default function ProductManagement() {
       }
       
       // Atualizar dados do produto
-      const { error } = await supabase
+      console.log("Enviando dados para atualização:", updateData);
+      const { data: updatedProduct, error } = await supabase
         .from('products')
         .update(updateData)
-        .eq('id', selectedProduct.id);
-      
-      if (error) throw error;
+        .eq('id', selectedProduct.id)
+        .select();
+
+      if (error) {
+        console.error("Erro ao atualizar produto:", error);
+        throw error;
+      }
+
+      console.log("Produto atualizado com sucesso:", updatedProduct);
       
       // Fazer upload das novas imagens selecionadas
       const uploadPromises = Object.entries(selectedFiles)
@@ -514,9 +549,9 @@ export default function ProductManagement() {
   };
 
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { id, value } = e.target;
+    const { name, value } = e.target;
     if (selectedProduct) {
-      setSelectedProduct(prev => ({ ...prev, [id]: value }));
+      setSelectedProduct(prev => ({ ...prev, [name]: value }));
     }
   };
 
@@ -735,6 +770,25 @@ export default function ProductManagement() {
       isMounted = false;
     };
   }, [isEditDialogOpen]);
+
+  // Função para lidar com mudanças no preço
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedProduct) return;
+    
+    // Pegar o valor do input
+    let value = e.target.value;
+    
+    // Remover caracteres não numéricos (exceto ponto)
+    value = value.replace(/[^0-9.]/g, '');
+    
+    // Verificar se é um número válido
+    if (value === '' || !isNaN(parseFloat(value))) {
+      setSelectedProduct(prev => ({
+        ...prev,
+        price: value
+      }));
+    }
+  };
 
   return (
     <AdminLayout>
@@ -1147,17 +1201,22 @@ export default function ProductManagement() {
                   </div>
                   
                   <div className="grid gap-2">
-                    <label htmlFor="edit-price" className="text-sm font-medium text-teal-200">
-                      Preço
+                    <label htmlFor="price" className="text-sm font-medium text-teal-200">
+                      Preço (R$)
                     </label>
                     <Input
-                      id="edit-price"
+                      id="price"
                       name="price"
                       type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
                       value={selectedProduct.price}
-                      onChange={handleEditInputChange}
+                      onChange={handlePriceChange}
+                      onFocus={(e) => e.target.select()}
                       className="bg-teal-800/50 border-teal-700 text-teal-50 placeholder:text-teal-400/50 focus:border-teal-600"
                     />
+                    <p className="text-xs text-teal-300">Use ponto (.) como separador decimal</p>
                   </div>
                 </div>
                 

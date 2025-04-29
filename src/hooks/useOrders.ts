@@ -148,6 +148,31 @@ export function useOrders() {
     }
   };
 
+  // Função para excluir um pedido
+  const deleteOrder = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (error) {
+        toast.error(`Falha ao excluir o pedido: ${error.message}`);
+        throw error;
+      }
+
+      // Atualizar o estado local removendo o pedido excluído
+      setOrders(prevOrders => 
+        prevOrders.filter(order => order.id !== orderId)
+      );
+
+      toast.success('Pedido excluído com sucesso');
+    } catch (err) {
+      console.error('Erro ao excluir pedido:', err);
+      throw err;
+    }
+  };
+
   // Função para criar um novo pedido
   const createOrder = async (orderData: OrderInput) => {
     try {
@@ -212,6 +237,7 @@ export function useOrders() {
     error,
     fetchOrders,
     updateOrderStatus,
-    createOrder
+    createOrder,
+    deleteOrder
   };
 } 
