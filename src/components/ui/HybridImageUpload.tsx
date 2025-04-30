@@ -303,6 +303,7 @@ export function HybridImageUpload({
                 
                 <Button 
                   variant="outline"
+                  type="button"
                   className="w-full bg-[#E8F1F2] border-[#1B98E0]/30 text-[#006494] hover:bg-[#E8F1F2] hover:text-[#006494] hover:border-[#1B98E0]"
                   onClick={handleUseImageUrl}
                   disabled={isValidatingUrl || !imageUrl.trim()}
