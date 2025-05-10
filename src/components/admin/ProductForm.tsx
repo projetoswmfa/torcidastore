@@ -8,9 +8,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { HybridImageUpload } from '../ui/HybridImageUpload';
 import { Loader2 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ImageUrlInput } from '../ui/ImageUrlInput';
 
 // Schema de validação do formulário
 const productSchema = z.object({
@@ -288,40 +288,24 @@ export function ProductForm() {
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Imagem do Produto</h3>
           
-          {isEditing ? (
-            <>
-              {imageUrl ? (
-                <div className="relative mb-4">
-                  <img 
-                    src={imageUrl} 
-                    alt="Imagem atual" 
-                    className="w-full h-auto max-h-64 object-contain rounded-md border" 
-                  />
-                  <p className="mt-2 text-sm text-gray-500">Imagem atual do produto</p>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500 mb-4">Este produto não possui imagem</p>
-              )}
-              
-              <HybridImageUpload 
-                productId={id} 
-                initialImageUrl={imageUrl}
-                folder="products"
-                tags={['produto', product?.category_id || form.getValues('category_id') || 'sem-categoria']}
-                description={product?.name || form.getValues('name')}
-                onSuccess={handleImageUploadSuccess} 
+          {imageUrl ? (
+            <div className="relative mb-4">
+              <img 
+                src={imageUrl} 
+                alt="Imagem atual" 
+                className="w-full h-auto max-h-64 object-contain rounded-md border" 
               />
-            </>
-          ) : (
-            <div className="text-center py-12 border rounded-md bg-gray-50">
-              <p className="text-gray-500 mb-4">
-                Você precisa criar o produto antes de fazer upload da imagem.
-              </p>
-              <p className="text-sm text-gray-400">
-                A funcionalidade de upload será habilitada após a criação inicial.
-              </p>
+              <p className="mt-2 text-sm text-gray-500">Imagem atual do produto</p>
             </div>
+          ) : (
+            <p className="text-sm text-gray-500 mb-4">Este produto não possui imagem</p>
           )}
+          
+          <ImageUrlInput 
+            initialImageUrl={imageUrl || ''}
+            productId={isEditing ? id : undefined}
+            onSuccess={handleImageUploadSuccess}
+          />
         </div>
       </div>
     </div>
